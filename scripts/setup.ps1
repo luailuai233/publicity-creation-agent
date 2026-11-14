@@ -11,3 +11,4 @@ if (-not (Test-Path -LiteralPath $VenvPython)) {
 }
 
 & $VenvPython -m pip install --disable-pip-version-check -r (Join-Path $ProjectRoot 'requirements-dev.txt')
+& $VenvPython -m alembic -c (Join-Path $ProjectRoot 'alembic.ini') upgrade head
