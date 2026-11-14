@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="boot-screen" aria-labelledby="product-title">
+  <section class="boot-window">
+    <div class="boot-titlebar">宣传编辑部 · 系统启动</div>
+    <div class="boot-content">
+      <p class="eyebrow">DEMO WORKSTATION / LOCAL MODE</p>
+      <h1 id="product-title">{{ product_name }}</h1>
+      <p>Python 工作台已启动。项目、素材和导出均保存在 D 盘。</p>
+      <span class="demo-badge">结构化模拟模式</span>
+    </div>
+  </section>
+</main>
+{% endblock %}

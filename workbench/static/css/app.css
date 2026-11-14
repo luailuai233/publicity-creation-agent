@@ -1,0 +1,42 @@
+:root {
+  color-scheme: light;
+  font-family: "Microsoft YaHei UI", "PingFang SC", sans-serif;
+  color: #14264a;
+  background: #a9d9f7;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+
+.boot-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background-color: #a9d9f7;
+  background-image: radial-gradient(#4c84b0 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+.boot-window {
+  width: min(720px, 100%);
+  border: 2px solid #173b69;
+  background: #f8fbff;
+  box-shadow: inset 1px 1px #fff, 10px 10px 0 rgb(23 59 105 / 20%);
+}
+
+.boot-titlebar {
+  padding: 10px 14px;
+  color: #fff;
+  font-weight: 700;
+  background: linear-gradient(90deg, #235f9f, #5f9ed0);
+  border-bottom: 2px solid #173b69;
+}
+
+.boot-content { padding: 36px; }
+.boot-content h1 { margin: 8px 0 12px; font-size: clamp(28px, 5vw, 46px); }
+.eyebrow { margin: 0; font: 700 12px/1.4 Consolas, monospace; letter-spacing: .12em; }
+.demo-badge { display: inline-block; margin-top: 18px; padding: 6px 10px; border: 1px solid #a73c72; color: #7e2857; background: #ffe3f0; }
+
+:focus-visible { outline: 3px solid #f24991; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }

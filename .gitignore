@@ -1,0 +1,12 @@
+.venv/
+.runtime/
+.superpowers/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+storage/*
+!storage/.gitkeep
+exports/*
+!exports/.gitkeep
+test-results/
+.env
