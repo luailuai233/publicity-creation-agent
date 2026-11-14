@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
+import time
 import uuid
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from workbench.db.base import Base
@@ -30,6 +31,7 @@ class Project(Base):
     length_max: Mapped[int] = mapped_column(Integer, default=1600)
     status: Mapped[str] = mapped_column(String(32), default=ProjectStatus.MATERIALS.value)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    sort_order: Mapped[int] = mapped_column(BigInteger, default=time.time_ns, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 

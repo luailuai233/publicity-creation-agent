@@ -1,0 +1,11 @@
+<aside class="material-preview">
+  <div class="panel-heading"><h2>素材预览</h2><span>可编辑</span></div>
+  {% if selected %}
+    <h3>{{ selected.file_name }}</h3>
+    <p class="demo-badge">{{ 'Demo 图片理解' if selected.mime_type.startswith('image/') else '本地解析' }}</p>
+    <textarea aria-label="解析文本">{{ selected.parsed_text }}</textarea>
+    <p>{{ selected.summary or '解析完成后显示摘要。' }}</p>
+  {% else %}
+    <div class="empty-state"><p>选择一个素材查看解析内容。</p></div>
+  {% endif %}
+</aside>

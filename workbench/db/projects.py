@@ -25,7 +25,7 @@ def create_project(session: Session, data: ProjectCreate) -> Project:
 
 
 def list_projects(session: Session) -> list[Project]:
-    statement = select(Project).order_by(Project.created_at.desc(), Project.id.desc())
+    statement = select(Project).order_by(Project.sort_order.desc())
     return list(session.scalars(statement).all())
 
 

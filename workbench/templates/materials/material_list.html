@@ -1,0 +1,14 @@
+<section class="materials-list">
+  <div class="panel-heading"><h2>文件与解析状态</h2><span>{{ materials|length }}/30</span></div>
+  <form class="upload-box" action="/api/projects/{{ project.id }}/materials" method="post" enctype="multipart/form-data">
+    <input type="file" name="files" multiple accept=".docx,.pdf,.txt,.png,.jpg,.jpeg,.webp">
+    <button class="secondary-action system-button" type="submit">添加素材</button>
+  </form>
+  {% for material in materials %}
+    <article class="material-row {{ material.parse_status|lower }}">
+      <strong>{{ material.file_name }}</strong><span>{{ material.parse_status }}</span><small>{{ material.category }}</small>
+    </article>
+  {% else %}
+    <div class="empty-state"><p>上传活动流程、采访或图片，系统会逐个处理。</p></div>
+  {% endfor %}
+</section>

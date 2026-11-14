@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="retro-desktop">
+  {% include "components/topbar.html" %}
+  {% include "components/dock.html" %}
+  <main class="desktop-canvas">
+    <section class="retro-window materials-window">
+      <header class="window-titlebar"><span>活动文件管理器 · {{ project.name }}</span><span>□ ×</span></header>
+      <div class="materials-grid">
+        {% include "materials/file_tree.html" %}
+        {% include "materials/material_list.html" %}
+        {% include "materials/material_preview.html" %}
+      </div>
+    </section>
+  </main>
+  <footer class="bottom-taskbar"><span>{{ materials|length }} 个素材</span><a class="primary-action system-button" href="#facts">确认活动事实</a></footer>
+</div>
+<script defer src="{{ url_for('static', path='js/materials.js') }}"></script>
+{% endblock %}
