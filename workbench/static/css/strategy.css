@@ -1,0 +1,8 @@
+.strategy-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+.proposal-window { min-width: 0; }
+.proposal-window.is-selected .window-titlebar { background: linear-gradient(90deg, #bd2d70, #f46ea9); }
+.proposal-content dl { display: grid; grid-template-columns: 72px 1fr; gap: 8px; }
+.proposal-content dt { font-weight: 700; color: #235f9f; }
+.proposal-content dd { margin: 0; line-height: 1.5; }
+.bottom-taskbar .primary-action:disabled { opacity: .45; cursor: not-allowed; }
+@media (max-width: 1280px) { .strategy-grid { gap: 8px; padding: 10px; } .proposal-content { padding: 12px; } }

@@ -11,3 +11,7 @@ class StrategyResult(BaseModel):
     fact_ids: List[str]
     method_summary: str
     risk: str
+
+
+class StrategySetResult(BaseModel):
+    strategies: List[StrategyResult]

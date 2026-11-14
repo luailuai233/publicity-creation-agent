@@ -1,0 +1,17 @@
+<article class="proposal-window retro-window{% if strategy.selected %} is-selected{% endif %}">
+  <header class="window-titlebar"><span>{{ strategy.name }}</span><span>{{ '已选择' if strategy.selected else '提案' }}</span></header>
+  <div class="window-content proposal-content">
+    <span class="demo-badge">Demo 模拟结果</span>
+    <dl>
+      <dt>受众</dt><dd>{{ project.audience }}</dd>
+      <dt>角度</dt><dd>{{ strategy.angle }}</dd>
+      <dt>开头</dt><dd>{{ strategy.opening }}</dd>
+      <dt>结构</dt><dd>{{ strategy.structure }}</dd>
+      <dt>事实</dt><dd>{{ strategy.fact_ids|length }} 条确认事实</dd>
+      <dt>方法</dt><dd>{{ strategy.method_summary }}</dd>
+      <dt>风险</dt><dd>{{ strategy.risk }}</dd>
+      <dt>标题方向</dt><dd>具体、克制、行动先于判断</dd>
+    </dl>
+    <button class="secondary-action system-button" type="button">选择这个提案</button>
+  </div>
+</article>

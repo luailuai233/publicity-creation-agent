@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}编辑提案箱 · {{ project.name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', path='css/strategy.css') }}">{% endblock %}
+{% block body %}
+<div class="retro-desktop">
+  {% include "components/topbar.html" %}
+  {% include "components/dock.html" %}
+  <main class="desktop-canvas strategy-grid">
+    {% for strategy in strategies %}{% include "strategy/proposal_window.html" %}{% else %}<p class="empty-state">请先从灵感页生成 3 个创作策略。</p>{% endfor %}
+  </main>
+  {% include "strategy/settings_dialog.html" %}
+  <footer class="bottom-taskbar"><span>{{ project.name }} · 需主动选择策略</span><button class="primary-action system-button" type="button" {% if not strategies|selectattr('selected')|list %}disabled{% endif %}>生成标题与大纲</button></footer>
+</div>
+{% endblock %}

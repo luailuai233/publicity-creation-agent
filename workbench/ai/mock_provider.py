@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from workbench.ai.envelope import AIEnvelope
 from workbench.ai.faults import FaultInjector
 from workbench.ai.schemas.reference import ReferenceAnalysisResult
+from workbench.ai.schemas.strategy import StrategySetResult
 
 
 class MockAIProvider:
@@ -16,6 +17,7 @@ class MockAIProvider:
         self.delay_ms = max(0, delay_ms)
         self.seed = seed
         self.faults = faults or FaultInjector()
+        self.last_strategy_envelope = None
 
     def _reference_payload(self, raw_text: str, source_id: str) -> dict:
         digest = hashlib.sha256(f"{self.seed}:{source_id}:{raw_text}".encode("utf-8")).digest()
@@ -63,3 +65,57 @@ class MockAIProvider:
             retries=1,
             status="NEEDS_REVIEW",
         )
+
+    def generate_strategies(self, facts: list[dict], method_summaries: list[str], project_name: str) -> AIEnvelope[StrategySetResult]:
+        fact_ids = [fact["id"] for fact in facts]
+        fact_sets = [fact_ids[:3], fact_ids[::2] or fact_ids[:1], fact_ids[1:4] or fact_ids[-1:]]
+        names = ["人物故事型", "反差成长型", "现场纪实型"]
+        openings = ["从一个人物动作切入", "先呈现结果与起点的反差", "从现场声音和时间切片切入"]
+        structures = ["人物细节—行动—变化—价值回扣", "结果反差—过程追溯—关键选择—余韵", "时间线—多人物切面—共同主题"]
+        warnings = []
+        method_summary = "；".join(method_summaries[:3]) or "从具体细节进入，行动后再回扣价值"
+        for attempt in range(2):
+            fault = self.faults.next("strategy")
+            payload = {} if fault == "schema_error" else {
+                "strategies": [
+                    {
+                        "name": names[index],
+                        "angle": f"围绕{names[index].replace('型', '')}组织已确认事实",
+                        "opening": openings[index],
+                        "structure": structures[index],
+                        "fact_ids": fact_sets[index],
+                        "method_summary": method_summary,
+                        "risk": "避免扩大人物身份、数字和未确认因果",
+                    }
+                    for index in range(3)
+                ]
+            }
+            try:
+                if fault == "timeout":
+                    raise TimeoutError("simulated timeout")
+                result = StrategySetResult.model_validate(payload)
+                envelope = AIEnvelope[StrategySetResult](
+                    result=result,
+                    warnings=warnings,
+                    fact_ids=fact_ids,
+                    provider=self.provider_name,
+                    duration_ms=self.delay_ms,
+                    token_count=max(80, len(facts) * 30),
+                    retries=attempt,
+                )
+                self.last_strategy_envelope = envelope
+                return envelope
+            except (ValidationError, TimeoutError):
+                if attempt == 0:
+                    warnings.append("第 1 次模拟输出未通过结构校验，已重试")
+        warnings.append("模拟输出连续两次未通过结构校验，请人工编辑")
+        envelope = AIEnvelope[StrategySetResult](
+            result=None,
+            warnings=warnings,
+            fact_ids=fact_ids,
+            provider=self.provider_name,
+            retries=1,
+            status="NEEDS_REVIEW",
+        )
+        self.last_strategy_envelope = envelope
+        return envelope
