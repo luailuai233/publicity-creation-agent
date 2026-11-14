@@ -1,0 +1,9 @@
+{% from "components/buttons.html" import primary %}
+<form class="project-create" hx-post="/projects" hx-target="#recent-projects" hx-swap="outerHTML">
+  <label for="project-name">活动名称</label>
+  <div class="create-row">
+    <input id="project-name" name="name" required maxlength="160" placeholder="例如：秋日公益市集">
+    {{ primary('新建创作任务', 'submit') }}
+  </div>
+  <p class="form-hint">默认受众：校园活动关注者 · 默认语气：真实、温暖、克制</p>
+</form>

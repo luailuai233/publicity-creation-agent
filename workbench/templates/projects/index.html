@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "components/window.html" import window %}
+{% block body %}
+<div class="retro-desktop">
+  {% include "components/topbar.html" %}
+  {% include "components/dock.html" %}
+  <main class="desktop-canvas home-grid">
+    {% call window('新建任务.EXE', 'create-window') %}
+      <p class="eyebrow">NEW EDITORIAL PROJECT</p>
+      <h1>{{ product_name }}</h1>
+      <p class="lead">把零散活动素材整理成有来源、可确认、能安全导出的宣传长图文。</p>
+      {% include "projects/create_form.html" %}
+    {% endcall %}
+    {% call window('最近任务.DAT', 'recent-window') %}
+      <div class="window-toolbar"><strong>最近任务</strong><span>自动保存已开启</span></div>
+      {% include "projects/recent_projects.html" %}
+    {% endcall %}
+  </main>
+  {% include "components/taskbar.html" %}
+</div>
+{% endblock %}

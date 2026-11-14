@@ -1,0 +1,7 @@
+{% macro primary(label, button_type='button') -%}
+<button class="primary-action system-button" type="{{ button_type }}">{{ label }}</button>
+{%- endmacro %}
+
+{% macro secondary(label, button_type='button') -%}
+<button class="secondary-action system-button" type="{{ button_type }}">{{ label }}</button>
+{%- endmacro %}

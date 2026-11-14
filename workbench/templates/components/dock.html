@@ -1,0 +1,8 @@
+<nav class="desktop-dock" aria-label="创作步骤">
+  {% set items = [('⌂','首页'),('▤','素材'),('✦','灵感'),('▥','策略'),('✎','编辑'),('✓','检查')] %}
+  {% for icon, label in items %}
+    <a class="dock-item{% if loop.first %} is-active{% endif %}" href="{% if loop.first %}/{% else %}#{% endif %}" {% if not loop.first %}aria-disabled="true"{% endif %}>
+      <span class="dock-icon" aria-hidden="true">{{ icon }}</span><span>{{ label }}</span>
+    </a>
+  {% endfor %}
+</nav>

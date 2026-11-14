@@ -1,0 +1,6 @@
+{% macro window(title, class_name='') -%}
+<section class="retro-window {{ class_name }}">
+  <header class="window-titlebar"><span>{{ title }}</span><span aria-hidden="true">□ ×</span></header>
+  <div class="window-content">{{ caller() }}</div>
+</section>
+{%- endmacro %}
