@@ -8,6 +8,7 @@ from workbench.ai.envelope import AIEnvelope
 from workbench.ai.faults import FaultInjector
 from workbench.ai.schemas.reference import ReferenceAnalysisResult
 from workbench.ai.schemas.strategy import StrategySetResult
+from workbench.ai.schemas.draft import DraftResult, OutlineResult
 
 
 class MockAIProvider:
@@ -18,6 +19,7 @@ class MockAIProvider:
         self.seed = seed
         self.faults = faults or FaultInjector()
         self.last_strategy_envelope = None
+        self.last_draft_fact_ids = []
 
     def _reference_payload(self, raw_text: str, source_id: str) -> dict:
         digest = hashlib.sha256(f"{self.seed}:{source_id}:{raw_text}".encode("utf-8")).digest()
@@ -119,3 +121,46 @@ class MockAIProvider:
         )
         self.last_strategy_envelope = envelope
         return envelope
+
+    def _validated_envelope(self, module: str, schema, payload: dict, fact_ids: list[str]):
+        warnings = []
+        for attempt in range(2):
+            fault = self.faults.next(module)
+            candidate = {} if fault == "schema_error" else payload
+            try:
+                if fault == "timeout":
+                    raise TimeoutError("simulated timeout")
+                result = schema.model_validate(candidate)
+                return AIEnvelope(
+                    result=result, warnings=warnings, fact_ids=fact_ids, provider=self.provider_name,
+                    duration_ms=self.delay_ms, token_count=max(60, len(fact_ids) * 30), retries=attempt,
+                )
+            except (ValidationError, TimeoutError):
+                if attempt == 0:
+                    warnings.append("第 1 次模拟输出未通过结构校验，已重试")
+        warnings.append("模拟输出连续两次未通过结构校验，请人工编辑")
+        return AIEnvelope(result=None, warnings=warnings, fact_ids=fact_ids, provider=self.provider_name, retries=1, status="NEEDS_REVIEW")
+
+    def generate_outline(self, strategy: dict, facts: list[dict]) -> AIEnvelope[OutlineResult]:
+        name = strategy["name"]
+        payload = {
+            "titles": [
+                f"在现场，看见每一次认真发生",
+                f"从一个动作开始：{name.replace('型', '')}里的真实变化",
+                "这一天，我们把答案写在行动里",
+                "不只是一场活动：那些被看见的细节",
+                "沿着时间线，重回那片温暖现场",
+            ],
+            "outline": ["现场细节与活动背景", "人物行动和关键事实", "变化与共同价值", "克制回扣与后续期待"],
+        }
+        return self._validated_envelope("outline", OutlineResult, payload, [fact["id"] for fact in facts])
+
+    def generate_draft(self, title: str, outline: list[str], strategy: dict, facts: list[dict]) -> AIEnvelope[DraftResult]:
+        self.last_draft_fact_ids = [fact["id"] for fact in facts]
+        blocks = []
+        for index, fact in enumerate(facts, start=1):
+            section = outline[min(index - 1, len(outline) - 1)] if outline else "现场记录"
+            blocks.append(f"<!-- block:block-{index} -->\n### {section}\n{fact['content']}。这条信息来自已确认的活动素材。")
+        content = f"# {title}\n\n" + "\n\n".join(blocks) + "\n\n我们把判断留在事实之后，也把期待留给下一次真实行动。"
+        payload = {"content": content, "cited_fact_ids": self.last_draft_fact_ids}
+        return self._validated_envelope("draft", DraftResult, payload, self.last_draft_fact_ids)

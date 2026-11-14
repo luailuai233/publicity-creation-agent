@@ -1,0 +1,9 @@
+<section class="journal-paper">
+  <div class="editor-tabs" role="tablist"><button role="tab">标题</button><button role="tab">大纲</button><button role="tab" aria-selected="true">正文</button></div>
+  {% if draft %}
+    <input class="draft-title" value="{{ draft.title }}" aria-label="稿件标题">
+    <textarea data-editor data-draft-id="{{ draft.id }}" aria-label="正文编辑器">{{ draft.content }}</textarea>
+  {% else %}
+    <div class="empty-state"><h2>标题与大纲尚未生成</h2><p>确认策略后生成五个候选标题和正文。</p></div>
+  {% endif %}
+</section>

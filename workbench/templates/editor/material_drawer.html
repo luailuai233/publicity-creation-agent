@@ -1,0 +1,4 @@
+<aside class="editor-material-drawer">
+  <h2>确认事实</h2>
+  {% for fact in facts %}<article><span>{{ fact.type }}</span><p>{{ fact.content }}</p><button class="text-button" type="button">查看来源</button></article>{% else %}<p>暂无确认事实。</p>{% endfor %}
+</aside>

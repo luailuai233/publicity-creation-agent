@@ -10,6 +10,7 @@ $RuntimeDirectories = @(
     (Join-Path $RuntimeRoot 'python-user'),
     (Join-Path $RuntimeRoot 'tmp'),
     (Join-Path $RuntimeRoot 'playwright-browsers'),
+    (Join-Path $RuntimeRoot 'browser-cache'),
     (Join-Path $ProjectRoot 'storage'),
     (Join-Path $ProjectRoot 'storage\projects'),
     (Join-Path $ProjectRoot 'exports'),
@@ -27,5 +28,10 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 $env:TEMP = Join-Path $RuntimeRoot 'tmp'
 $env:TMP = Join-Path $RuntimeRoot 'tmp'
 $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $RuntimeRoot 'playwright-browsers'
+$SystemEdge = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+if (Test-Path -LiteralPath $SystemEdge) {
+    $env:PLAYWRIGHT_EXECUTABLE_PATH = $SystemEdge
+}
+$env:PLAYWRIGHT_BROWSER_CACHE = Join-Path $RuntimeRoot 'browser-cache'
 $env:DATABASE_URL = 'sqlite:///' + ((Join-Path $ProjectRoot 'storage\app.db') -replace '\\', '/')
 $env:WORKBENCH_ROOT = $ProjectRoot

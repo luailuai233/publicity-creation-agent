@@ -174,6 +174,8 @@ class Draft(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
+    citations: Mapped[list[DraftCitation]] = relationship(back_populates="draft", cascade="all, delete-orphan")
+
 
 class DraftCitation(Base):
     __tablename__ = "draft_citations"
@@ -182,6 +184,8 @@ class DraftCitation(Base):
     draft_id: Mapped[str] = mapped_column(ForeignKey("drafts.id", ondelete="CASCADE"), index=True)
     fact_id: Mapped[str] = mapped_column(ForeignKey("fact_cards.id", ondelete="RESTRICT"))
     block_id: Mapped[str] = mapped_column(String(120))
+
+    draft: Mapped[Draft] = relationship(back_populates="citations")
 
 
 class QualityIssue(Base):

@@ -1,0 +1,12 @@
+.editor-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr) 290px; gap: 12px; }
+.editor-material-drawer, .editor-suggestions, .editor-center { min-width: 0; background: #f8fbff; border: 2px solid #173b69; }
+.editor-material-drawer, .editor-suggestions { padding: 14px; max-height: calc(100vh - 132px); overflow: auto; }
+.editor-material-drawer article { padding: 10px; margin-bottom: 8px; background: #fff7b8; border: 1px solid #9d8837; }
+.journal-paper { min-height: calc(100vh - 190px); padding: 18px 28px; background: #fff; }
+.editor-tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid #8aabc5; }
+.editor-tabs button { padding: 8px 14px; border: 1px solid #8aabc5; background: #eaf5fc; }
+.draft-title { width: 100%; padding: 10px; font-size: 22px; font-weight: 700; border: 0; border-bottom: 1px solid #8aabc5; }
+[data-editor] { width: 100%; min-height: calc(100vh - 290px); padding: 20px 0; border: 0; resize: none; font: 15px/1.8 "Microsoft YaHei UI", sans-serif; }
+.draft-statusbar { display: flex; gap: 24px; padding: 8px 12px; color: #fff; background: #235f9f; font-size: 12px; }
+.citation-badge { color: #235f9f; background: #eaf5fc; border: 1px solid #8aabc5; }
+@media (max-width: 1280px) { .editor-layout { grid-template-columns: 220px minmax(0, 1fr) 280px; gap: 8px; padding: 10px; } }

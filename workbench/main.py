@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from workbench.ai.mock_provider import MockAIProvider
 from workbench.api.references import router as references_api_router
 from workbench.api.strategies import router as strategies_api_router
+from workbench.api.drafts import router as drafts_api_router
 from workbench.api.projects import router as projects_api_router
 from workbench.api.jobs import router as jobs_api_router
 from workbench.api.materials import router as materials_api_router
@@ -20,6 +21,7 @@ from workbench.web.page_routes import router as page_router
 from workbench.web.material_routes import router as material_page_router
 from workbench.web.inspiration_routes import router as inspiration_page_router
 from workbench.web.strategy_routes import router as strategy_page_router
+from workbench.web.editor_routes import router as editor_page_router
 from workbench.jobs.recovery import recover_stale_jobs
 
 
@@ -62,11 +64,13 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     application.include_router(facts_api_router)
     application.include_router(references_api_router)
     application.include_router(strategies_api_router)
+    application.include_router(drafts_api_router)
     application.include_router(jobs_api_router)
     application.include_router(page_router)
     application.include_router(material_page_router)
     application.include_router(inspiration_page_router)
     application.include_router(strategy_page_router)
+    application.include_router(editor_page_router)
 
     return application
 

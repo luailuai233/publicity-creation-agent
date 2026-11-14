@@ -1,0 +1,5 @@
+<div class="draft-statusbar">
+  <span>字数 <b data-word-count>{{ draft.content|replace(' ', '')|length if draft else 0 }}</b></span>
+  <span>引用 <b data-citation-count>{{ draft.citations|length if draft else 0 }}</b></span>
+  <span>保存 <b data-save-time>{{ draft.updated_at.strftime('%H:%M:%S') if draft else '未保存' }}</b></span>
+</div>
