@@ -1,0 +1,12 @@
+<section class="retro-window reference-window">
+  <header class="window-titlebar"><span>案例收藏夹</span><span>3 SLOTS</span></header>
+  <div class="window-content reference-stack">
+    {% for slot in range(3) %}
+      {% set item = references[slot] if slot < references|length else none %}
+      <article class="reference-card{% if not item %} is-empty{% endif %}">
+        {% if item %}<span>{{ item.input_type }}</span><h3>{{ item.source_label or '未命名案例' }}</h3><p>{{ item.raw_text[:90] }}</p><small>{{ item.status }}</small>
+        {% else %}<span>EMPTY SLOT {{ slot + 1 }}</span><h3>添加参考案例</h3><p>粘贴文本或上传截图；链接不会自动抓取。</p>{% endif %}
+      </article>
+    {% endfor %}
+  </div>
+</section>

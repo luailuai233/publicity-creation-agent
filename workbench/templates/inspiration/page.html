@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}灵感收藏夹 · {{ project.name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', path='css/inspiration.css') }}">{% endblock %}
+{% block body %}
+<div class="retro-desktop">
+  {% include "components/topbar.html" %}
+  {% include "components/dock.html" %}
+  <main class="desktop-canvas">
+    <div class="inspiration-grid">
+      {% include "inspiration/reference_window.html" %}
+      {% include "inspiration/analysis_window.html" %}
+      {% include "inspiration/guidance_window.html" %}
+    </div>
+  </main>
+  <footer class="bottom-taskbar"><span>{{ project.name }} · 方法与事实已隔离</span><a class="primary-action system-button" href="/project/{{ project.id }}/strategy">生成 3 个创作策略</a></footer>
+</div>
+{% endblock %}

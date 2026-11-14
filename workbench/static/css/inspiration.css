@@ -1,0 +1,19 @@
+.inspiration-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 1.07fr) minmax(0, .91fr);
+  gap: 12px;
+  align-items: stretch;
+}
+.inspiration-grid > .retro-window { min-width: 0; height: calc(100vh - 132px); overflow: hidden; }
+.reference-stack, .mechanism-stack, .guidance-stack { display: grid; gap: 10px; overflow: auto; max-height: calc(100vh - 210px); }
+.reference-card, .mechanism-card, .guidance-group { padding: 12px; background: #fff; border: 1px solid #8aabc5; }
+.reference-card.is-empty { border-style: dashed; color: #526c82; background: #f3f8fb; }
+.reference-card h3, .mechanism-card h3, .guidance-group h3 { margin: 6px 0; }
+.mechanism-card p { margin: 6px 0; line-height: 1.5; }
+.guidance-group { border-left: 4px solid #39784d; }
+.guidance-group.risk { border-left-color: #b83b4b; background: #fff2f2; }
+
+@media (max-width: 1280px) {
+  .inspiration-grid { grid-template-columns: minmax(0, 1.02fr) minmax(0, 1.07fr) minmax(0, .91fr); gap: 8px; padding: 10px; }
+  .inspiration-grid .window-content { padding: 12px; }
+}

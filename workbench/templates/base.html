@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}热点驱动宣传创作工作台{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}">
+    {% block head_extra %}{% endblock %}
     <script defer src="{{ url_for('static', path='vendor/htmx.min.js') }}"></script>
     <script defer src="{{ url_for('static', path='js/app.js') }}"></script>
   </head>
