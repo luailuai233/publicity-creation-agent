@@ -1,0 +1,6 @@
+<section class="conflict-panel">
+  <h2>解决冲突</h2>
+  {% if conflicts %}
+    {% for group, items in conflicts.items() %}<p><strong>{{ group }}</strong> · {{ items|length }} 个待选择值</p>{% endfor %}
+  {% else %}<p>当前没有未解决冲突。</p>{% endif %}
+</section>

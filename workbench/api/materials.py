@@ -13,7 +13,7 @@ from workbench.jobs.models import JobCreate, JobRead
 from workbench.jobs.repository import enqueue_job
 from workbench.jobs.runner import run_material_job
 from workbench.materials.limits import MaterialValidationError
-from workbench.materials.service import create_file_material, serialize_material
+from workbench.materials.service import create_file_material, delete_material, serialize_material
 from workbench.storage.local import LocalStorage
 from workbench.web.dependencies import get_session
 
@@ -93,7 +93,5 @@ def destroy(material_id: str, request: Request, session: Session = Depends(get_s
     material = session.get(Material, material_id)
     if material is None:
         return api_error("MATERIAL_NOT_FOUND", "没有找到这个素材", 404)
-    LocalStorage(request.app.state.settings.paths.uploads).delete_file(Path(material.path))
-    session.delete(material)
-    session.commit()
+    delete_material(session, LocalStorage(request.app.state.settings.paths.uploads), material_id)
     return api_response({"deleted": material_id})

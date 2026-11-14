@@ -12,6 +12,15 @@
         {% include "materials/material_preview.html" %}
       </div>
     </section>
+    <section id="facts" class="facts-workspace">
+      <div class="facts-header"><h2>活动事实便签</h2><span>{{ facts|length }} 条</span></div>
+      <div class="facts-grid">
+        {% for fact in facts %}{% include "facts/fact_note.html" %}{% else %}<p class="empty-state">解析素材后提取待确认事实。</p>{% endfor %}
+      </div>
+      {% include "facts/conflict_resolver.html" %}
+      {% include "facts/timeline.html" %}
+      {% include "facts/source_dialog.html" %}
+    </section>
   </main>
   <footer class="bottom-taskbar"><span>{{ materials|length }} 个素材</span><a class="primary-action system-button" href="#facts">确认活动事实</a></footer>
 </div>

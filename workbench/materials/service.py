@@ -5,7 +5,7 @@ from typing import BinaryIO
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from workbench.db.models import Material
+from workbench.db.models import FactCard, FactSource, Material, SourceChunk
 from workbench.jobs.models import JobCreate
 from workbench.jobs.repository import enqueue_job
 from workbench.materials.limits import validate_upload
@@ -50,3 +50,27 @@ def serialize_material(material: Material) -> dict:
         "path": material.path,
         "size_bytes": material.size_bytes,
     }
+
+
+def delete_material(session: Session, storage: LocalStorage, material_id: str) -> None:
+    material = session.get(Material, material_id)
+    if material is None:
+        raise LookupError(material_id)
+    affected_fact_ids = list(
+        session.scalars(
+            select(FactSource.fact_id)
+            .join(SourceChunk, SourceChunk.id == FactSource.source_chunk_id)
+            .where(SourceChunk.material_id == material_id)
+        ).all()
+    )
+    if material.path:
+        storage.delete_file(Path(material.path))
+    session.delete(material)
+    session.flush()
+    for fact_id in set(affected_fact_ids):
+        remaining = session.scalar(select(func.count(FactSource.source_chunk_id)).where(FactSource.fact_id == fact_id))
+        if not remaining:
+            fact = session.get(FactCard, fact_id)
+            if fact is not None:
+                fact.status = "PENDING"
+    session.commit()

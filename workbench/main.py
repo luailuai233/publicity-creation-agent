@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from workbench.api.projects import router as projects_api_router
 from workbench.api.jobs import router as jobs_api_router
 from workbench.api.materials import router as materials_api_router
+from workbench.api.facts import router as facts_api_router
 from workbench.api.responses import api_error
 from workbench.db.session import create_session_factory, create_sqlite_engine
 from workbench.settings import Settings
@@ -52,6 +53,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     application.include_router(projects_api_router)
     application.include_router(materials_api_router)
+    application.include_router(facts_api_router)
     application.include_router(jobs_api_router)
     application.include_router(page_router)
     application.include_router(material_page_router)
