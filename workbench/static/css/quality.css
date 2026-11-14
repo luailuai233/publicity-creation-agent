@@ -1,0 +1,8 @@
+.quality-grid { display: grid; grid-template-columns: 220px minmax(320px, .8fr) minmax(420px, 1.2fr); gap: 12px; }
+.quality-grid > section { min-width: 0; padding: 16px; background: #f8fbff; border: 2px solid #173b69; }
+.quality-checks progress { width: 100%; }
+.quality-checks li { margin: 8px 0; }
+.issue { padding: 10px; margin-bottom: 8px; background: #fff; border-left: 4px solid #397fb8; }
+.issue.high { border-left-color: #b83b4b; background: #fff2f2; }
+.export-preview pre { white-space: pre-wrap; font: 14px/1.7 "Microsoft YaHei UI", sans-serif; }
+@media (max-width: 1280px) { .quality-grid { grid-template-columns: 190px minmax(300px, .8fr) minmax(380px, 1.2fr); gap: 8px; padding: 10px; } }

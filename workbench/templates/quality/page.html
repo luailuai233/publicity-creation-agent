@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}系统检查 · {{ project.name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', path='css/quality.css') }}">{% endblock %}
+{% block body %}
+<div class="retro-desktop">
+  {% include "components/topbar.html" %}
+  {% include "components/dock.html" %}
+  <main class="desktop-canvas quality-grid">{% include "quality/scan_progress.html" %}{% include "quality/issue_list.html" %}{% include "quality/export_preview.html" %}</main>
+  <footer class="bottom-taskbar"><span data-export-path>导出将保存到 D:\aipm\demo\exports</span><button class="primary-action system-button" data-export-draft="{{ draft.id if draft else '' }}" {% if not draft or draft.status == 'CHECK_INCOMPLETE' %}disabled{% endif %}>确认并导出</button></footer>
+</div>
+<textarea hidden data-plain-text>{{ plain_text }}</textarea>
+<script defer src="{{ url_for('static', path='js/export.js') }}"></script>
+{% endblock %}

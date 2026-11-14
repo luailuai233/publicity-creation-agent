@@ -175,6 +175,7 @@ class Draft(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
     citations: Mapped[list[DraftCitation]] = relationship(back_populates="draft", cascade="all, delete-orphan")
+    quality_issues: Mapped[list[QualityIssue]] = relationship(back_populates="draft", cascade="all, delete-orphan")
 
 
 class DraftCitation(Base):
@@ -198,6 +199,8 @@ class QualityIssue(Base):
     block_id: Mapped[str] = mapped_column(String(120), default="")
     message: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32), default="OPEN")
+
+    draft: Mapped[Draft] = relationship(back_populates="quality_issues")
 
 
 class Job(Base):

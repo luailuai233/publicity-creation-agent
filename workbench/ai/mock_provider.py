@@ -9,6 +9,7 @@ from workbench.ai.faults import FaultInjector
 from workbench.ai.schemas.reference import ReferenceAnalysisResult
 from workbench.ai.schemas.strategy import StrategySetResult
 from workbench.ai.schemas.draft import DraftResult, OutlineResult
+from workbench.ai.schemas.quality import QualityResult
 
 
 class MockAIProvider:
@@ -164,3 +165,7 @@ class MockAIProvider:
         content = f"# {title}\n\n" + "\n\n".join(blocks) + "\n\n我们把判断留在事实之后，也把期待留给下一次真实行动。"
         payload = {"content": content, "cited_fact_ids": self.last_draft_fact_ids}
         return self._validated_envelope("draft", DraftResult, payload, self.last_draft_fact_ids)
+
+    def check_quality(self, content: str, facts: list[dict], method_summaries: list[str]) -> AIEnvelope[QualityResult]:
+        payload = {"issues": []}
+        return self._validated_envelope("quality", QualityResult, payload, [fact["id"] for fact in facts])

@@ -1,0 +1,1 @@
+<section class="quality-checks"><h2>检查项目</h2><progress max="100" value="{{ 100 if draft and draft.status == 'CHECKED' else 40 }}"></progress><ul><li>事实来源</li><li>事实冲突</li><li>近似表达</li><li>隐私风险</li></ul><strong>{{ '检查完成' if draft and draft.status == 'CHECKED' else '检查未完成' }}</strong></section>

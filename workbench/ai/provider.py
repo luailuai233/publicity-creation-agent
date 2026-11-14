@@ -4,6 +4,7 @@ from workbench.ai.envelope import AIEnvelope
 from workbench.ai.schemas.reference import ReferenceAnalysisResult
 from workbench.ai.schemas.strategy import StrategySetResult
 from workbench.ai.schemas.draft import DraftResult, OutlineResult
+from workbench.ai.schemas.quality import QualityResult
 
 
 class AIProvider(Protocol):
@@ -17,4 +18,7 @@ class AIProvider(Protocol):
         ...
 
     def generate_draft(self, title: str, outline: list[str], strategy: dict, facts: list[dict]) -> AIEnvelope[DraftResult]:
+        ...
+
+    def check_quality(self, content: str, facts: list[dict], method_summaries: list[str]) -> AIEnvelope[QualityResult]:
         ...

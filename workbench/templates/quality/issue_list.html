@@ -1,0 +1,1 @@
+<section class="quality-issues"><h2>问题清单</h2>{% for issue in issues %}<article class="issue {{ issue.severity|lower }}"><span>{{ issue.type }} · {{ issue.severity }}</span><p>{{ issue.message }}</p><small>{{ issue.status }}</small></article>{% else %}<div class="empty-state">尚未运行检查，不能视为通过。</div>{% endfor %}</section>
