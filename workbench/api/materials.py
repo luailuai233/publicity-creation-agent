@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from workbench.api.responses import api_error, api_response
 from workbench.db.models import Job, Material
-from workbench.db.projects import ProjectNotFoundError, get_project
+from workbench.db.projects import ProjectNotFoundError, get_project, touch_project_inputs
 from workbench.jobs.models import JobCreate, JobRead
 from workbench.jobs.repository import enqueue_job
 from workbench.jobs.runner import run_material_job
@@ -71,6 +71,7 @@ def update(material_id: str, patch: MaterialPatch, session: Session = Depends(ge
         return api_error("MATERIAL_NOT_FOUND", "没有找到这个素材", 404)
     for key, value in patch.model_dump(exclude_none=True).items():
         setattr(material, key, value)
+    touch_project_inputs(session, material.project_id)
     session.commit()
     session.refresh(material)
     return api_response(serialize_material(material))

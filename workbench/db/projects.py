@@ -5,7 +5,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from workbench.db.models import Draft, DraftCitation, EventLog, Job, Project, QualityIssue, Strategy, TimelineItem
-from workbench.domain.project_schemas import ProjectCreate
+from workbench.domain.project_schemas import ProjectCreate, ProjectPatch
 
 
 class ProjectNotFoundError(LookupError):
@@ -13,6 +13,10 @@ class ProjectNotFoundError(LookupError):
 
 
 class UnsafeStoragePathError(ValueError):
+    pass
+
+
+class ProjectValidationError(ValueError):
     pass
 
 
@@ -33,6 +37,32 @@ def get_project(session: Session, project_id: str) -> Project:
     project = session.get(Project, project_id)
     if project is None:
         raise ProjectNotFoundError(project_id)
+    return project
+
+
+def update_project(session: Session, project_id: str, patch: ProjectPatch) -> Project:
+    project = get_project(session, project_id)
+    changes = patch.model_dump(exclude_none=True)
+    length_min = changes.get("length_min", project.length_min)
+    length_max = changes.get("length_max", project.length_max)
+    if length_min > length_max:
+        raise ProjectValidationError("最少字数不能大于最多字数")
+    if changes:
+        for key, value in changes.items():
+            setattr(project, key, value)
+        project.revision += 1
+        from workbench.drafts.service import invalidate_project_checks
+        invalidate_project_checks(session, project.id)
+        session.commit()
+        session.refresh(project)
+    return project
+
+
+def touch_project_inputs(session: Session, project_id: str) -> Project:
+    project = get_project(session, project_id)
+    project.revision += 1
+    from workbench.drafts.service import invalidate_project_checks
+    invalidate_project_checks(session, project_id)
     return project
 
 

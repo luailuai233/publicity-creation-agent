@@ -47,3 +47,45 @@ def test_project_api_validation_error_is_actionable_chinese(tmp_path: Path) -> N
     assert payload["error"]["code"] == "VALIDATION_ERROR"
     assert payload["error"]["message"] == "请检查输入内容"
     assert payload["requestId"]
+
+
+def test_project_api_patch_persists_creation_brief_and_increments_revision(tmp_path: Path) -> None:
+    with build_client(tmp_path) as client:
+        project = client.post("/api/projects", json={"name": "秋日市集"}).json()["data"]
+        response = client.patch(
+            f"/api/projects/{project['id']}",
+            json={
+                "goal": "生成一篇面向家长的活动报道",
+                "audience": "学生家长与社区居民",
+                "tone": "真实、明快、克制",
+                "length_min": 900,
+                "length_max": 1300,
+            },
+        )
+        fetched = client.get(f"/api/projects/{project['id']}").json()["data"]
+
+    assert response.status_code == 200
+    assert response.json()["data"] == fetched
+    assert fetched["goal"] == "生成一篇面向家长的活动报道"
+    assert fetched["audience"] == "学生家长与社区居民"
+    assert fetched["tone"] == "真实、明快、克制"
+    assert (fetched["length_min"], fetched["length_max"]) == (900, 1300)
+    assert fetched["revision"] == 1
+
+
+def test_project_api_patch_rejects_invalid_brief_without_partial_write(tmp_path: Path) -> None:
+    with build_client(tmp_path) as client:
+        project = client.post("/api/projects", json={"name": "安全更新"}).json()["data"]
+        inverted = client.patch(
+            f"/api/projects/{project['id']}",
+            json={"audience": "不应保存", "length_min": 1800, "length_max": 800},
+        )
+        blank = client.patch(f"/api/projects/{project['id']}", json={"tone": "   "})
+        fetched = client.get(f"/api/projects/{project['id']}").json()["data"]
+
+    assert inverted.status_code == 422
+    assert blank.status_code == 422
+    assert fetched["audience"] == "校园活动关注者"
+    assert fetched["tone"] == "真实、温暖、克制"
+    assert (fetched["length_min"], fetched["length_max"]) == (1200, 1600)
+    assert fetched["revision"] == 0

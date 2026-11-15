@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from workbench.ai.provider import AIProvider
 from workbench.db.models import ReferenceAnalysis, ReferenceCase
+from workbench.db.projects import touch_project_inputs
 
 
 class ReferenceCreate(BaseModel):
@@ -28,6 +29,7 @@ class ReferenceAnalysisUnavailable(RuntimeError):
 def create_reference(session: Session, project_id: str, data: ReferenceCreate) -> ReferenceCase:
     reference = ReferenceCase(project_id=project_id, **data.model_dump(), status="PENDING")
     session.add(reference)
+    touch_project_inputs(session, project_id)
     session.commit()
     session.refresh(reference)
     return reference

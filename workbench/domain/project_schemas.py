@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ProjectCreate(BaseModel):
@@ -12,14 +12,40 @@ class ProjectCreate(BaseModel):
     is_demo: bool = False
 
 
+class ProjectPatch(BaseModel):
+    goal: Optional[str] = Field(default=None, max_length=2000)
+    audience: Optional[str] = Field(default=None, max_length=160)
+    tone: Optional[str] = Field(default=None, max_length=160)
+    length_min: Optional[int] = Field(default=None, ge=200, le=10000)
+    length_max: Optional[int] = Field(default=None, ge=200, le=10000)
+
+    @field_validator("goal", "audience", "tone")
+    @classmethod
+    def strip_non_empty_text(cls, value: Optional[str], info):
+        if value is None:
+            return value
+        value = value.strip()
+        if info.field_name in {"audience", "tone"} and not value:
+            raise ValueError("不能为空")
+        return value
+
+    @model_validator(mode="after")
+    def validate_supplied_length_range(self):
+        if self.length_min is not None and self.length_max is not None and self.length_min > self.length_max:
+            raise ValueError("最少字数不能大于最多字数")
+        return self
+
+
 class ProjectRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     name: str
+    goal: str
     audience: str
     tone: str
     length_min: int
     length_max: int
     status: str
+    revision: int
     is_demo: bool

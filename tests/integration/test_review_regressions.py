@@ -96,3 +96,46 @@ def test_upload_batch_continues_after_invalid_file(tmp_path: Path) -> None:
     assert response.status_code == 201
     assert [item.get("material", {}).get("file_name") for item in data if item.get("material")] == ["one.txt", "three.txt"]
     assert any(item.get("error") for item in data)
+
+
+def test_reference_and_material_mutations_invalidate_downstream_results(tmp_path: Path) -> None:
+    app = create_app(Settings(project_root=tmp_path, mock_ai_delay_ms=0))
+    Base.metadata.create_all(app.state.engine)
+    with app.state.session_factory() as session:
+        project = Project(name="上游失效")
+        session.add(project); session.flush()
+        strategy = Strategy(project_id=project.id, name="现场", angle="现场", opening="声音", structure="线", fact_ids=[], method_summary="", risk="", selected=True)
+        session.add(strategy); session.flush()
+        draft = Draft(project_id=project.id, strategy_id=strategy.id, title="稿件", outline=[], content="正文", status="CHECKED", quality_status="PASSED", version=1, is_current=True)
+        session.add(draft); session.flush()
+        session.add(QualityIssue(draft_id=draft.id, type="PRIVACY_RISK", severity="HIGH", block_id="document", message="旧检查"))
+        session.commit()
+        project_id, draft_id = project.id, draft.id
+
+    with TestClient(app) as client:
+        reference = client.post(
+            f"/api/projects/{project_id}/references",
+            json={"input_type": "TEXT", "raw_text": "案例文本", "source_label": "案例"},
+        ).json()["data"]
+        assert client.get(f"/api/projects/{project_id}").json()["data"]["revision"] == 1
+        client.patch(f"/api/references/{reference['id']}", json={"source_label": "更新案例"})
+        assert client.get(f"/api/projects/{project_id}").json()["data"]["revision"] == 2
+        deleted_reference = client.delete(f"/api/references/{reference['id']}")
+        assert deleted_reference.status_code == 200
+        assert client.get(f"/api/projects/{project_id}").json()["data"]["revision"] == 3
+
+        uploaded = client.post(
+            f"/api/projects/{project_id}/materials",
+            files=[("files", ("note.txt", b"event notes", "text/plain"))],
+        ).json()["data"][0]["material"]
+        assert client.get(f"/api/projects/{project_id}").json()["data"]["revision"] == 4
+        client.patch(f"/api/materials/{uploaded['id']}", json={"category": "NOTE"})
+        assert client.get(f"/api/projects/{project_id}").json()["data"]["revision"] == 5
+        client.delete(f"/api/materials/{uploaded['id']}")
+        assert client.get(f"/api/projects/{project_id}").json()["data"]["revision"] == 6
+
+    with app.state.session_factory() as session:
+        draft = session.get(Draft, draft_id)
+        issue = session.scalar(select(QualityIssue).where(QualityIssue.draft_id == draft_id))
+    assert draft.quality_status == "STALE"
+    assert issue is None

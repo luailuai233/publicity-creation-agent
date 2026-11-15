@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from workbench.api.responses import api_error, api_response
 from workbench.db.models import ReferenceCase
+from workbench.db.projects import touch_project_inputs
 from workbench.references.service import ReferenceAnalysisUnavailable, ReferenceCreate, ReferencePatch, analyze_reference, create_reference
 from workbench.web.dependencies import get_session
 
@@ -51,9 +52,22 @@ def update(reference_id: str, patch: ReferencePatch, session: Session = Depends(
         return api_error("REFERENCE_NOT_FOUND", "没有找到这个参考案例", 404)
     for key, value in patch.model_dump(exclude_none=True).items():
         setattr(reference, key, value)
+    touch_project_inputs(session, reference.project_id)
     session.commit()
     session.refresh(reference)
     return api_response(serialize(reference))
+
+
+@router.delete("/api/references/{reference_id}")
+def destroy(reference_id: str, session: Session = Depends(get_session)):
+    reference = session.get(ReferenceCase, reference_id)
+    if reference is None:
+        return api_error("REFERENCE_NOT_FOUND", "没有找到这个参考案例", 404)
+    project_id = reference.project_id
+    session.delete(reference)
+    touch_project_inputs(session, project_id)
+    session.commit()
+    return api_response({"deleted": reference_id})
 
 
 @router.post("/api/references/{reference_id}/analyze")

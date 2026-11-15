@@ -10,7 +10,7 @@ from workbench.jobs.models import JobCreate
 from workbench.jobs.repository import enqueue_job
 from workbench.materials.limits import validate_upload
 from workbench.storage.local import LocalStorage
-from workbench.drafts.service import invalidate_project_checks
+from workbench.db.projects import touch_project_inputs
 
 
 def project_usage(session: Session, project_id: str) -> tuple[int, int]:
@@ -32,6 +32,7 @@ def create_file_material(session: Session, storage: LocalStorage, project_id: st
         size_bytes=stored.size_bytes,
     )
     session.add(material)
+    touch_project_inputs(session, project_id)
     session.commit()
     session.refresh(material)
     job = enqueue_job(session, JobCreate(project_id=project_id, material_id=material.id, type="PARSE_MATERIAL"))
@@ -75,5 +76,5 @@ def delete_material(session: Session, storage: LocalStorage, material_id: str) -
             fact = session.get(FactCard, fact_id)
             if fact is not None:
                 fact.status = "PENDING"
-    invalidate_project_checks(session, project_id)
+    touch_project_inputs(session, project_id)
     session.commit()
