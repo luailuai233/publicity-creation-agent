@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from workbench.ai.provider import AIProvider
 from workbench.ai.schemas.draft import OutlineResult
-from workbench.db.models import Draft, DraftCitation, QualityIssue, Strategy
+from workbench.db.models import Draft, DraftCitation, Project, QualityIssue, Strategy
 from workbench.drafts.citations import fact_has_source
 from workbench.drafts.schemas import DraftPatch
 from workbench.facts.eligibility import get_eligible_facts
@@ -17,7 +17,7 @@ def invalidate_project_checks(session: Session, project_id: str) -> None:
     draft_ids = list(session.scalars(select(Draft.id).where(Draft.project_id == project_id)).all())
     if draft_ids:
         session.execute(delete(QualityIssue).where(QualityIssue.draft_id.in_(draft_ids)))
-        session.execute(update(Draft).where(Draft.id.in_(draft_ids)).values(status="DRAFT"))
+        session.execute(update(Draft).where(Draft.id.in_(draft_ids)).values(status="DRAFT", quality_status="STALE"))
 
 
 def _selected_strategy(session: Session, project_id: str) -> Strategy:
@@ -43,10 +43,16 @@ def create_outline(session: Session, provider: AIProvider, project_id: str) -> O
     return envelope.result
 
 
-def generate_draft(session: Session, provider: AIProvider, project_id: str, title: str, outline: list[str]) -> Draft:
+def generate_draft(session: Session, provider: AIProvider, project_id: str, title: str, outline: list[str], revision: bool = False) -> Draft:
     strategy = _selected_strategy(session, project_id)
     facts = _strategy_facts(session, strategy)
-    envelope = provider.generate_draft(title, outline, {"name": strategy.name, "structure": strategy.structure}, facts)
+    project = session.get(Project, project_id)
+    envelope = provider.generate_draft(
+        title,
+        outline,
+        {"name": strategy.name, "structure": strategy.structure, "revision": revision, "goal": project.goal, "audience": project.audience, "tone": project.tone},
+        facts,
+    )
     if envelope.status != "DONE" or envelope.result is None:
         raise DraftNeedsReview("正文生成未完成，已保留现有稿件")
     current_version = session.scalar(select(func.coalesce(func.max(Draft.version), 0)).where(Draft.project_id == project_id))
@@ -76,6 +82,8 @@ def save_draft(session: Session, draft_id: str, patch: DraftPatch) -> Draft:
         draft.quality_status = "STALE"
         draft.revision += 1
         session.execute(delete(QualityIssue).where(QualityIssue.draft_id == draft.id))
+        project = session.get(Project, draft.project_id)
+        project.revision += 1
     session.commit()
     session.refresh(draft)
     return draft

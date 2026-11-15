@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy import select
 
 from workbench.ai.mock_provider import MockAIProvider
@@ -10,7 +11,7 @@ from workbench.db.projects import delete_project
 from workbench.db.session import create_session_factory, create_sqlite_engine
 from workbench.drafts.schemas import DraftPatch
 from workbench.drafts.service import save_draft
-from workbench.exports.markdown import write_markdown_export
+from workbench.exports.markdown import ExportBlocked, write_markdown_export
 from workbench.main import create_app
 from workbench.quality.scanner import scan_content
 from workbench.quality.service import run_quality_check
@@ -63,6 +64,13 @@ def test_quality_rejects_citation_without_live_source_and_exports_do_not_collide
     session.delete(material); session.flush(); facts[0].status = "PENDING"; session.commit()
     issues = run_quality_check(session, MockAIProvider(delay_ms=0), draft.id)
     assert any(issue.type == "MISSING_SOURCE" for issue in issues)
+    with pytest.raises(ExportBlocked, match="事实"):
+        write_markdown_export(session, draft.id, tmp_path / "exports", confirm_high=True)
+
+    for issue in issues:
+        issue.status = "RESOLVED"
+    draft.quality_status = "PASSED"
+    session.commit()
 
     project2 = Project(name=project.name); session.add(project2); session.flush()
     strategy2 = Strategy(project_id=project2.id, name="现场", angle="现场", opening="声音", structure="线", fact_ids=[], method_summary="", risk="", selected=True)

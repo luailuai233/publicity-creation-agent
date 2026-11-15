@@ -84,7 +84,7 @@ class MockAIProvider:
                 "strategies": [
                     {
                         "name": names[index],
-                        "angle": f"围绕{names[index].replace('型', '')}组织已确认事实",
+                        "angle": f"围绕{names[index].replace('型', '')}组织已确认事实，服务于{project_name}",
                         "opening": openings[index],
                         "structure": structures[index],
                         "fact_ids": fact_sets[index],
@@ -164,7 +164,8 @@ class MockAIProvider:
         for index, fact in enumerate(facts, start=1):
             section = outline[min(index - 1, len(outline) - 1)] if outline else "现场记录"
             blocks.append(f"<!-- block:block-{index} -->\n### {section}\n{fact['content']}。这条信息来自已确认的活动素材。")
-        content = f"# {title}\n\n" + "\n\n".join(blocks) + "\n\n我们把判断留在事实之后，也把期待留给下一次真实行动。"
+        closing = "本次修订进一步压缩了套话，让每个判断紧跟可追溯事实。" if strategy.get("revision") else "我们把判断留在事实之后，也把期待留给下一次真实行动。"
+        content = f"# {title}\n\n" + "\n\n".join(blocks) + f"\n\n{closing}"
         payload = {"content": content, "cited_fact_ids": self.last_draft_fact_ids}
         return self._validated_envelope("draft", DraftResult, payload, self.last_draft_fact_ids)
 

@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from workbench.db.base import Base
 from workbench.db.projects import create_project
+from workbench.db.models import AgentRun
 from workbench.domain.project_schemas import ProjectCreate
 from workbench.main import create_app
 from workbench.settings import Settings
@@ -51,3 +52,16 @@ def test_product_pages_are_workspaces_not_manual_generation_chain(tmp_path: Path
     assert "标题与大纲尚未生成" not in editor
     assert "最终审核" in quality
     assert "最多自动修订 1 次" in quality
+
+
+def test_completed_workspace_links_to_results(tmp_path: Path) -> None:
+    app, client, project = build_project_client(tmp_path)
+    with app.state.session_factory() as session:
+        session.add(AgentRun(project_id=project.id, goal="完成", status="COMPLETED"))
+        session.commit()
+    with client:
+        text = client.get(f"/project/{project.id}/agent").text
+    assert f'/project/{project.id}/strategy' in text
+    assert f'/project/{project.id}/editor' in text
+    assert f'/project/{project.id}/export' in text
+    assert "审核最终稿" in text

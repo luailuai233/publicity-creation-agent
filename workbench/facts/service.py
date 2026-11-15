@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from workbench.db.models import FactCard, FactSource, Material, SourceChunk
+from workbench.db.models import FactCard, FactSource, Material, Project, SourceChunk
 from workbench.facts.schemas import ConflictResolution, FactPatch
 from workbench.drafts.service import invalidate_project_checks
 
@@ -47,6 +47,7 @@ def update_fact(session: Session, fact_id: str, patch: FactPatch) -> FactCard:
             _validate_confirmation(session, fact)
         fact.status = patch.status
     invalidate_project_checks(session, fact.project_id)
+    session.get(Project, fact.project_id).revision += 1
     session.commit()
     session.refresh(fact)
     return fact
@@ -64,6 +65,7 @@ def resolve_conflict(session: Session, group_id: str, resolution: ConflictResolu
         fact.status = "CONFIRMED" if fact.id == chosen.id else "INVALID"
         fact.conflict_group = None
     invalidate_project_checks(session, chosen.project_id)
+    session.get(Project, chosen.project_id).revision += 1
     session.commit()
     session.refresh(chosen)
     return chosen

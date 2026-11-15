@@ -11,7 +11,7 @@ from workbench.agent.snapshot import ProjectSnapshot
 from workbench.agent.tools.base import AgentToolContext, AgentToolResult
 from workbench.agent.tools.registry import ToolRegistry
 from workbench.db.base import Base
-from workbench.db.models import AgentRun, AgentStep, Project
+from workbench.db.models import AgentRun, AgentStep, Draft, Project, Strategy
 from workbench.db.projects import create_project
 from workbench.db.session import create_session_factory, create_sqlite_engine
 from workbench.domain.project_schemas import ProjectCreate
@@ -162,6 +162,41 @@ def test_runner_discards_result_when_user_revision_changes_during_tool(tmp_path:
     assert step.status == "SKIPPED"
     assert step.result_ref is None
     assert "输入已被用户更新" in step.output_summary
+
+
+def test_runner_removes_draft_created_from_stale_inputs(tmp_path: Path) -> None:
+    session_factory, project_id, run_id = build_runtime(tmp_path)
+    state = {"phase": 0}
+
+    class DraftingTool(RecordingTool):
+        def execute(self, context, data):
+            self.calls += 1
+            self.state["phase"] += 1
+            strategy = Strategy(project_id=project_id, name="旧策略", angle="旧", opening="旧", structure="旧", fact_ids=[], method_summary="", risk="", selected=True)
+            context.session.add(strategy)
+            context.session.flush()
+            draft = Draft(project_id=project_id, strategy_id=strategy.id, title="旧输入稿件", outline=[], content="旧内容", version=1, is_current=True)
+            context.session.add(draft)
+            context.session.flush()
+            project = context.session.get(Project, project_id)
+            project.revision += 1
+            context.session.commit()
+            return AgentToolResult(summary="完成", result_ref=draft.id)
+
+    registry = ToolRegistry()
+    registry.register(DraftingTool("generate_content", state))
+    AgentRunner(
+        session_factory,
+        registry,
+        snapshot_builder=lambda session, _: simple_snapshot(project_id, session.get(Project, project_id).revision),
+        planner=lambda *_: AgentDecision(action=AgentAction.CALL_TOOL, tool_name="generate_content", reason_summary="生成") if state["phase"] == 0 else AgentDecision(action=AgentAction.COMPLETE, reason_summary="完成"),
+    ).run(run_id)
+
+    with session_factory() as session:
+        step = session.scalar(select(AgentStep).where(AgentStep.run_id == run_id))
+        draft = session.scalar(select(Draft).where(Draft.project_id == project_id, Draft.is_current.is_(True)))
+    assert step.status == "SKIPPED"
+    assert draft is None
 
 
 def test_runner_skips_successful_step_with_same_input_fingerprint(tmp_path: Path) -> None:

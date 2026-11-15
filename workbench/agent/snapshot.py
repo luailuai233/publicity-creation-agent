@@ -70,7 +70,7 @@ def build_project_snapshot(session: Session, project_id: str) -> ProjectSnapshot
         project_id=project.id,
         project_revision=project.revision,
         goal=project.goal,
-        pending_material_ids=[material.id for material in materials if material.parse_status in {"QUEUED", "PROCESSING"}],
+        pending_material_ids=[material.id for material in materials if material.parse_status == "QUEUED"],
         source_chunk_count=session.scalar(
             select(func.count()).select_from(SourceChunk).join(Material).where(Material.project_id == project_id)
         )
@@ -81,7 +81,7 @@ def build_project_snapshot(session: Session, project_id: str) -> ProjectSnapshot
         conflict_groups=sorted({fact.conflict_group for fact in facts if fact.conflict_group}),
         pending_fact_count=sum(fact.status == "PENDING" for fact in facts),
         selected_reference_count=len(references),
-        unanalyzed_reference_ids=[reference.id for reference in references if reference.analysis is None],
+        unanalyzed_reference_ids=[reference.id for reference in references if reference.analysis is None and reference.status == "PENDING"],
         usable_reference_count=sum(reference.analysis is not None for reference in references),
         allow_without_references=bool(decisions.get("allow_without_references")),
         strategy_count=len(strategies),

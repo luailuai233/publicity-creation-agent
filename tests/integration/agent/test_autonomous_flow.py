@@ -6,6 +6,7 @@ from workbench.agent.repository import create_run
 from workbench.agent.runner import AgentRunner
 from workbench.agent.tools.registry import build_default_registry
 from workbench.ai.envelope import AIEnvelope
+from workbench.ai.faults import FaultInjector
 from workbench.ai.mock_provider import MockAIProvider
 from workbench.ai.schemas.quality import QualityResult, QualitySuggestion
 from workbench.db.base import Base
@@ -74,7 +75,28 @@ def test_agent_auto_revises_at_most_once_then_completes(tmp_path: Path) -> None:
     with factory() as session:
         run = session.get(AgentRun, run_id)
         tool_names = list(session.scalars(select(AgentStep.tool_name).where(AgentStep.run_id == run_id).order_by(AgentStep.sequence)).all())
+        contents = list(session.scalars(select(Draft.content).where(Draft.project_id == project.id).order_by(Draft.version)).all())
     assert run.status == "COMPLETED"
     assert run.revision_count == 1
     assert tool_names.count("generate_content") == 2
     assert tool_names.count("check_quality") == 2
+    assert len(contents) == 2
+    assert contents[0] != contents[1]
+
+
+def test_failed_reference_analysis_waits_for_user_instead_of_failing(tmp_path: Path) -> None:
+    engine = create_sqlite_engine(tmp_path / "reference-failure.db")
+    Base.metadata.create_all(engine)
+    factory = create_session_factory(engine)
+    provider = MockAIProvider(delay_ms=0, faults=FaultInjector({"reference": ["timeout", "timeout"]}))
+    with factory() as session:
+        project, _reference, _facts = seed_ready_project(session)
+        run = create_run(session, project.id, project.goal)
+        run_id = run.id
+
+    AgentRunner(factory, build_default_registry(), provider=provider).run(run_id)
+
+    with factory() as session:
+        run = session.get(AgentRun, run_id)
+    assert run.status == "WAITING_USER"
+    assert run.waiting_reason == "MISSING_REFERENCE"

@@ -24,6 +24,15 @@ def write_markdown_export(session: Session, draft_id: str, exports_root: Path, c
         raise ExportBlocked("检查未完成，不能导出")
     if draft.status != "CHECKED":
         raise ExportBlocked("请先完成系统检查")
+    factual_blocker = session.scalar(
+        select(QualityIssue.id).where(
+            QualityIssue.draft_id == draft_id,
+            QualityIssue.type.in_(["MISSING_SOURCE", "FACT_CONFLICT"]),
+            QualityIssue.status == "OPEN",
+        ).limit(1)
+    )
+    if draft.quality_status == "BLOCKED" or factual_blocker:
+        raise ExportBlocked("仍有未解决的事实来源或事实冲突，不能导出")
     high_open = session.scalar(
         select(QualityIssue.id).where(QualityIssue.draft_id == draft_id, QualityIssue.severity == "HIGH", QualityIssue.status == "OPEN").limit(1)
     )

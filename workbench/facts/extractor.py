@@ -1,4 +1,5 @@
 import re
+import uuid
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -26,5 +27,12 @@ def extract_fact_candidates(session: Session, project_id: str) -> list[FactCard]
                 session.flush()
                 session.add(FactSource(fact_id=fact.id, source_chunk_id=chunk.id))
                 created.append(fact)
+    for fact_type in ("TIME", "NUMBER"):
+        same_type = [fact for fact in created if fact.type == fact_type]
+        if len({fact.content for fact in same_type}) > 1:
+            group_id = f"{fact_type.lower()}-{uuid.uuid4()}"
+            for fact in same_type:
+                fact.status = "CONFLICT"
+                fact.conflict_group = group_id
     session.commit()
     return created

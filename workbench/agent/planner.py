@@ -97,7 +97,7 @@ def decide_next(snapshot: ProjectSnapshot, run: Any) -> AgentDecision:
         )
     if snapshot.blocking_issue_count:
         return _question("QUALITY_BLOCKERS", "稿件仍有事实来源或冲突问题，需要处理后才能完成")
-    if snapshot.auto_fixable_issue_count and run.revision_count < run.max_revisions:
+    if snapshot.auto_fixable_issue_count and snapshot.draft_revision == 0 and run.revision_count < run.max_revisions:
         return AgentDecision(
             action=AgentAction.CALL_TOOL,
             tool_name="generate_content",

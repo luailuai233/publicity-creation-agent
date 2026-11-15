@@ -23,7 +23,7 @@ class GenerateContentTool:
     def execute(self, context: AgentToolContext, data: ContentToolInput) -> AgentToolResult:
         outline = create_outline(context.session, context.provider, data.project_id)
         title = outline.titles[outline.recommended_title_index]
-        draft = generate_draft(context.session, context.provider, data.project_id, title, outline.outline)
+        draft = generate_draft(context.session, context.provider, data.project_id, title, outline.outline, revision=data.mode == "revision")
         project = context.session.get(Project, data.project_id)
         decisions = dict(project.decisions or {})
         decisions["recommended_title"] = title

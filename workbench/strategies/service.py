@@ -21,8 +21,10 @@ def generate_strategies(session: Session, provider: AIProvider, project_id: str)
         .where(ReferenceCase.project_id == project_id, ReferenceCase.selected.is_(True))
     ).all()
     method_summaries = [item for group in transferable for item in (group or [])]
+    project = session.get(Project, project_id)
+    project_brief = f"{project.name}｜目标：{project.goal}｜受众：{project.audience}｜语气：{project.tone}｜篇幅：{project.length_min}-{project.length_max}字"
     envelope = provider.generate_strategies(
-        [fact.model_dump() for fact in facts], method_summaries, project_name=project_id
+        [fact.model_dump() for fact in facts], method_summaries, project_name=project_brief
     )
     if envelope.status != "DONE" or envelope.result is None:
         raise StrategyNeedsReview("策略模拟生成未完成，已保留上一版")
@@ -41,7 +43,6 @@ def generate_strategies(session: Session, provider: AIProvider, project_id: str)
         session.add(strategy)
         persisted.append(strategy)
     session.flush()
-    project = session.get(Project, project_id)
     decisions = dict(project.decisions or {})
     decisions["recommended_strategy_id"] = persisted[envelope.result.recommended_index].id
     project.decisions = decisions

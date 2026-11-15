@@ -21,6 +21,12 @@
     {% endcall %}
     {% include "agent/status_panel.html" %}
     {% include "agent/timeline.html" %}
+    {% if run and run.status == 'COMPLETED' %}
+    {% call window('创作结果', 'agent-results-window') %}
+      <p>自主创作已完成，可继续检查和调整各项结果。</p>
+      <nav class="result-actions"><a href="/project/{{ project.id }}/strategy">查看策略</a><a href="/project/{{ project.id }}/editor">编辑稿件</a><a href="/project/{{ project.id }}/export">审核最终稿</a></nav>
+    {% endcall %}
+    {% endif %}
   </main>
   <footer class="bottom-taskbar"><span data-agent-footer>{{ project.name }} · {{ run.status if run else 'READY' }}</span><a class="system-button secondary-action" href="/project/{{ project.id }}/materials">查看项目资料</a></footer>
 </div>

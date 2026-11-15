@@ -70,6 +70,14 @@ def test_planner_stops_when_tool_budget_is_exhausted() -> None:
     assert decision.reason_summary == "已达到本次运行的 12 次工具调用上限"
 
 
+def test_planner_does_not_overwrite_a_manually_edited_draft() -> None:
+    decision = decide_next(
+        snapshot(draft_revision=1, auto_fixable_issue_count=1),
+        SimpleNamespace(tool_call_count=4, max_tool_calls=12, revision_count=0, max_revisions=1),
+    )
+    assert decision.action == AgentAction.COMPLETE
+
+
 def test_sourced_unconflicted_high_confidence_fact_can_be_auto_confirmed() -> None:
     fact = FactEvidence(
         id="fact-1",

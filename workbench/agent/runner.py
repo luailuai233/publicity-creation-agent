@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Callable, Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from workbench.agent.fingerprints import fingerprint_for
@@ -11,7 +11,7 @@ from workbench.agent.planner import AgentAction, AgentDecision, decide_next
 from workbench.agent.snapshot import ProjectSnapshot, build_project_snapshot
 from workbench.agent.tools.base import AgentToolContext
 from workbench.agent.tools.registry import ToolRegistry
-from workbench.db.models import AgentRun, AgentStep, Project
+from workbench.db.models import AgentRun, AgentStep, Draft, DraftCitation, Project, QualityIssue
 
 
 ACTIVE_STATUSES = {"QUEUED", "RUNNING", "PAUSED", "WAITING_USER"}
@@ -52,6 +52,21 @@ class AgentRunner:
         run.error_code = error_code
         run.active_key = None
         run.ended_at = datetime.utcnow()
+
+    def _discard_stale_result(self, session: Session, tool_name: str, result_ref: Optional[str], project_id: str) -> None:
+        if tool_name != "generate_content" or not result_ref:
+            return
+        draft = session.get(Draft, result_ref)
+        if draft is None or draft.project_id != project_id:
+            return
+        session.execute(delete(DraftCitation).where(DraftCitation.draft_id == draft.id))
+        session.execute(delete(QualityIssue).where(QualityIssue.draft_id == draft.id))
+        session.delete(draft)
+        previous = session.scalar(
+            select(Draft).where(Draft.project_id == project_id, Draft.id != result_ref).order_by(Draft.version.desc())
+        )
+        if previous is not None:
+            previous.is_current = True
 
     def run(self, run_id: str) -> None:
         cycles = 0
@@ -156,6 +171,7 @@ class AgentRunner:
                     project = session.get(Project, run.project_id)
                     run.tool_call_count += 1
                     if project.revision != snapshot.project_revision:
+                        self._discard_stale_result(session, tool.name, result.result_ref, run.project_id)
                         step.status = "SKIPPED"
                         step.output_summary = "输入已被用户更新，丢弃旧工具结果并重新规划"
                         step.result_ref = None
