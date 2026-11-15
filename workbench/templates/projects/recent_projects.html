@@ -8,7 +8,7 @@
           <p>{{ project.audience }} · {{ project.length_min }}–{{ project.length_max }} 字</p>
         </div>
         <div class="project-actions">
-          <a class="system-button secondary-action" href="/project/{{ project.id }}/materials">继续</a>
+          <a class="system-button secondary-action" href="/project/{{ project.id }}/agent">进入 Agent</a>
           <button class="text-button" type="button" hx-delete="/projects/{{ project.id }}" hx-target="#project-{{ project.id }}" hx-swap="outerHTML" hx-confirm="删除后项目素材也会一并清理，确定继续吗？">删除</button>
         </div>
       </article>

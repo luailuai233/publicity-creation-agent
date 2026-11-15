@@ -28,8 +28,8 @@ def test_strategy_page_renders_three_proposals_and_one_gated_cta(tmp_path: Path)
 
     assert page.status_code == 200
     assert page.text.count('class="proposal-window') == 3
-    assert page.text.count('class="primary-action') == 1
-    assert "生成标题与大纲" in page.text
-    assert "disabled" in page.text
+    assert page.text.count('class="primary-action') == 0
+    assert "Agent 推荐" in page.text
+    assert "生成标题与大纲" not in page.text
     for label in ("受众", "角度", "开头", "结构", "事实", "方法", "风险", "标题方向"):
         assert label in page.text

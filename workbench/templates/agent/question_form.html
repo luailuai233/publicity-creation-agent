@@ -1,0 +1,8 @@
+<form class="agent-question" data-agent-answer>
+  <strong>需要你的确认</strong>
+  <p>{{ run.waiting_payload.prompt if run.waiting_payload else run.waiting_reason }}</p>
+  <input type="hidden" name="question_code" value="{{ run.waiting_reason }}">
+  {% if run.waiting_reason == 'MISSING_REFERENCE' %}<label><input type="radio" name="selected_option_id" value="continue" required> 允许按通用写作原则继续</label>{% endif %}
+  <label>补充说明<textarea name="free_text"></textarea></label>
+  <button class="system-button secondary-action" type="submit">提交确认并继续</button>
+</form>

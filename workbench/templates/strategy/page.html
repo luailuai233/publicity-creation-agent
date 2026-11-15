@@ -9,6 +9,6 @@
     {% for strategy in strategies %}{% include "strategy/proposal_window.html" %}{% else %}<p class="empty-state">请先从灵感页生成 3 个创作策略。</p>{% endfor %}
   </main>
   {% include "strategy/settings_dialog.html" %}
-  <footer class="bottom-taskbar"><span data-workflow-status>{{ project.name }} · 需主动选择策略</span><button class="primary-action system-button" data-open-editor="{{ project.id }}" type="button" {% if not strategies|selectattr('selected')|list %}disabled{% endif %}>生成标题与大纲</button></footer>
+  <footer class="bottom-taskbar"><span data-workflow-status>{{ project.name }} · Agent 推荐并默认采用一个策略，你可以覆盖</span><a class="secondary-action system-button" href="/project/{{ project.id }}/editor">查看 Agent 稿件</a></footer>
 </div>
 {% endblock %}

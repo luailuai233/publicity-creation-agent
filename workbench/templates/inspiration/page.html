@@ -12,6 +12,6 @@
       {% include "inspiration/guidance_window.html" %}
     </div>
   </main>
-  <footer class="bottom-taskbar"><span data-workflow-status>{{ project.name }} · 方法与事实已隔离</span><button class="primary-action system-button" data-generate-strategies="{{ project.id }}" type="button">分析案例并生成 3 个策略</button></footer>
+  <footer class="bottom-taskbar"><span data-workflow-status>{{ project.name }} · Agent 会自动分析，案例方法与活动事实保持隔离</span><a class="secondary-action system-button" href="/project/{{ project.id }}/agent">返回 Agent</a></footer>
 </div>
 {% endblock %}

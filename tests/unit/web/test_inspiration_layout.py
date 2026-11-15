@@ -19,7 +19,8 @@ def test_inspiration_page_keeps_required_three_window_structure(tmp_path: Path) 
     assert page.text.count('class="reference-card') == 3
     assert page.text.count('class="mechanism-card') == 4
     assert page.text.count('class="guidance-group') == 3
-    assert page.text.count('class="primary-action') == 1
+    assert page.text.count('class="primary-action') == 0
+    assert "Agent 会自动分析" in page.text
     assert 'class="inspiration-grid"' in page.text
     assert "grid-template-columns: minmax(0, 1.02fr) minmax(0, 1.07fr) minmax(0, .91fr)" in css.text
     assert "@media (max-width: 1280px)" in css.text

@@ -14,8 +14,10 @@ def test_actual_pages_keep_cta_visible_no_overflow_and_three_columns(live_server
             assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
             page.locator("[data-demo-reset] button").click(); page.wait_for_url("**/materials")
             project_id = page.url.split("/project/")[1].split("/")[0]
+            page.goto(f"{base_url}/project/{project_id}/agent")
+            assert page.locator("[data-agent-start] .primary-action").is_visible()
+            assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
             page.goto(f"{base_url}/project/{project_id}/inspiration")
-            assert page.locator("[data-generate-strategies]").is_visible()
             assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
             columns = page.locator(".inspiration-grid").evaluate("e => getComputedStyle(e).gridTemplateColumns.split(' ').length")
             assert columns == 3

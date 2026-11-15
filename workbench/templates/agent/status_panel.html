@@ -1,0 +1,16 @@
+<section class="retro-window agent-status-panel">
+  <header class="window-titlebar"><span>当前计划</span><span data-agent-status>{{ run.status if run else 'READY' }}</span></header>
+  <div class="window-content">
+    <p data-agent-plan>{{ run.plan_summary if run and run.plan_summary else '整理活动事实 → 分析参考方法 → 选择创作方向 → 生成并检查文章' }}</p>
+    <ol class="agent-stages">
+      {% for stage in ['资料解析','事实校验','案例分析','策略规划','内容生成','质量检查'] %}<li>{{ stage }}</li>{% endfor %}
+    </ol>
+    {% if run and run.status == 'WAITING_USER' %}{% include "agent/question_form.html" %}{% endif %}
+    {% if run and run.error_code %}<p class="agent-failure">失败原因：{{ run.error_code }}</p>{% endif %}
+    <div class="agent-controls">
+      <button class="system-button secondary-action" data-agent-pause type="button">暂停</button>
+      <button class="system-button secondary-action" data-agent-resume type="button">恢复</button>
+      <button class="text-button" data-agent-cancel type="button">取消</button>
+    </div>
+  </div>
+</section>

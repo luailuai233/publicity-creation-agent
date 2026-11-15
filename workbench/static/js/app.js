@@ -30,23 +30,10 @@ document.addEventListener("click", async (event) => {
       await jsonRequest(`/api/references/${button.dataset.analyzeReference}/analyze`, {method: "POST"});
       button.textContent = "分析完成"; return;
     }
-    if (button.dataset.generateStrategies) {
-      button.disabled = true; setWorkflowStatus("正在结构化分析并生成策略…");
-      for (const item of document.querySelectorAll("[data-analyze-reference]")) await jsonRequest(`/api/references/${item.dataset.analyzeReference}/analyze`, {method: "POST"});
-      await jsonRequest(`/api/projects/${button.dataset.generateStrategies}/strategies/generate`, {method: "POST"});
-      location.href = `/project/${button.dataset.generateStrategies}/strategy`; return;
-    }
     if (button.dataset.selectStrategy) {
       await jsonRequest(`/api/strategies/${button.dataset.selectStrategy}/select`, {method: "PATCH", headers: {"Content-Type": "application/json"}, body: "{}"});
       document.querySelectorAll("[data-select-strategy]").forEach((item) => item.textContent = "选择这个提案");
       button.textContent = "已选择"; document.querySelector("[data-open-editor]").disabled = false; return;
-    }
-    if (button.dataset.openEditor) { location.href = `/project/${button.dataset.openEditor}/editor`; return; }
-    if (button.dataset.generateDraft) {
-      button.disabled = true; setWorkflowStatus("正在生成标题、大纲与正文…");
-      const outline = await jsonRequest(`/api/projects/${button.dataset.generateDraft}/drafts/outline`, {method: "POST"});
-      await jsonRequest(`/api/projects/${button.dataset.generateDraft}/drafts/generate`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({title: outline.titles[0], outline: outline.outline})});
-      location.reload(); return;
     }
     if (button.dataset.runCheck) {
       button.disabled = true; setWorkflowStatus("正在检查事实、表达与隐私风险…");
