@@ -1,0 +1,10 @@
+.git
+.venv
+.runtime
+.superpowers
+storage
+exports
+test-results
+__pycache__
+*.pyc
+.env

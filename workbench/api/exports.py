@@ -18,7 +18,7 @@ class ExportRequest(BaseModel):
 def export(draft_id: str, data: ExportRequest, request: Request, session: Session = Depends(get_session)):
     try:
         path = write_markdown_export(session, draft_id, request.app.state.settings.paths.exports, data.confirm_high)
-        return api_response({"path": str(path)})
+        return api_response({"path": str(path), "file_name": path.name})
     except LookupError:
         return api_error("DRAFT_NOT_FOUND", "没有找到这个稿件", 404)
     except ExportBlocked as error:

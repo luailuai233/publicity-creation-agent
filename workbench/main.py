@@ -17,6 +17,7 @@ from workbench.api.jobs import router as jobs_api_router
 from workbench.api.materials import router as materials_api_router
 from workbench.api.facts import router as facts_api_router
 from workbench.api.responses import api_error
+from workbench.api.demo import router as demo_api_router
 from workbench.db.session import create_session_factory, create_sqlite_engine
 from workbench.settings import Settings
 from workbench.web.page_routes import router as page_router
@@ -63,6 +64,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         return api_error("VALIDATION_ERROR", "请检查输入内容", 422, fields)
 
     application.include_router(projects_api_router)
+    application.include_router(demo_api_router)
     application.include_router(materials_api_router)
     application.include_router(facts_api_router)
     application.include_router(references_api_router)

@@ -10,3 +10,4 @@ exports/*
 !exports/.gitkeep
 test-results/
 .env
+*.log
