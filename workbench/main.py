@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -7,6 +8,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 
 from workbench.ai.mock_provider import MockAIProvider
+from workbench.agent.recovery import recover_agent_runs
+from workbench.agent.runner import AgentRunner
+from workbench.agent.tools.registry import ToolRegistry
+from workbench.api.agent_runs import router as agent_runs_api_router
 from workbench.api.references import router as references_api_router
 from workbench.api.strategies import router as strategies_api_router
 from workbench.api.drafts import router as drafts_api_router
@@ -41,6 +46,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     async def lifespan(_application: FastAPI):
         with session_factory() as session:
             recover_stale_jobs(session)
+            recovered_run_ids = recover_agent_runs(session)
+        application.state.agent_tasks = set()
+        for run_id in recovered_run_ids:
+            task = asyncio.create_task(asyncio.to_thread(application.state.agent_runner.run, run_id))
+            application.state.agent_tasks.add(task)
+            task.add_done_callback(application.state.agent_tasks.discard)
         yield
 
     application = FastAPI(title="热点驱动宣传创作工作台", lifespan=lifespan)
@@ -48,6 +59,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     application.state.engine = engine
     application.state.session_factory = session_factory
     application.state.ai_provider = MockAIProvider(delay_ms=effective_settings.mock_ai_delay_ms)
+    application.state.agent_registry = ToolRegistry()
+    application.state.agent_runner = AgentRunner(
+        session_factory,
+        application.state.agent_registry,
+        provider=application.state.ai_provider,
+    )
     application.mount(
         "/static",
         StaticFiles(directory=str(PACKAGE_ROOT / "static")),
@@ -64,6 +81,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         return api_error("VALIDATION_ERROR", "请检查输入内容", 422, fields)
 
     application.include_router(projects_api_router)
+    application.include_router(agent_runs_api_router)
     application.include_router(demo_api_router)
     application.include_router(materials_api_router)
     application.include_router(facts_api_router)
