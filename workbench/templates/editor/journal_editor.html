@@ -4,6 +4,6 @@
     <input class="draft-title" value="{{ draft.title }}" aria-label="稿件标题">
     <textarea data-editor data-draft-id="{{ draft.id }}" aria-label="正文编辑器">{{ draft.content }}</textarea>
   {% else %}
-    <div class="empty-state"><h2>标题与大纲尚未生成</h2><p>确认策略后生成五个候选标题和正文。</p></div>
+    <div class="empty-state"><h2>标题与大纲尚未生成</h2><p>确认策略后生成五个候选标题和正文。</p><button class="system-button primary-action" data-generate-draft="{{ project.id }}" type="button">生成标题、大纲与正文</button><p data-workflow-status></p></div>
   {% endif %}
 </section>

@@ -1,10 +1,10 @@
 from pathlib import Path
 import shutil
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from workbench.db.models import Project
+from workbench.db.models import Draft, DraftCitation, EventLog, Job, Project, QualityIssue, Strategy, TimelineItem
 from workbench.domain.project_schemas import ProjectCreate
 
 
@@ -44,6 +44,13 @@ def delete_project(session: Session, project_id: str, uploads_root: Path) -> Non
         raise UnsafeStoragePathError(str(project_dir))
 
     try:
+        draft_ids = list(session.scalars(select(Draft.id).where(Draft.project_id == project_id)).all())
+        if draft_ids:
+            session.execute(delete(QualityIssue).where(QualityIssue.draft_id.in_(draft_ids)))
+            session.execute(delete(DraftCitation).where(DraftCitation.draft_id.in_(draft_ids)))
+            session.execute(delete(Draft).where(Draft.id.in_(draft_ids)))
+        for model in (Strategy, TimelineItem, Job, EventLog):
+            session.execute(delete(model).where(model.project_id == project_id))
         session.delete(project)
         session.flush()
         if project_dir.exists():

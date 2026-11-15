@@ -10,7 +10,7 @@
     <section class="editor-center">{% include "editor/journal_editor.html" %}{% include "editor/statusbar.html" %}</section>
     <aside class="editor-suggestions"><h2>编辑建议</h2><span class="demo-badge">Demo 模拟结果</span><p>{{ strategy.name if strategy else '尚未选择策略' }}</p><p>关键事实均需保留来源标记。</p></aside>
   </main>
-  <footer class="bottom-taskbar"><span>{{ project.name }} · 2 秒自动保存</span><a class="primary-action system-button" href="/project/{{ project.id }}/export">进入系统检查</a></footer>
+  <footer class="bottom-taskbar"><span>{{ project.name }} · 2 秒自动保存</span><a class="primary-action system-button" data-enter-quality href="/project/{{ project.id }}/export" {% if not draft %}aria-disabled="true"{% endif %}>进入系统检查</a></footer>
 </div>
 <script defer src="{{ url_for('static', path='js/editor.js') }}"></script>
 {% endblock %}

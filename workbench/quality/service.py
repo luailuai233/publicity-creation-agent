@@ -2,7 +2,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from workbench.ai.provider import AIProvider
-from workbench.db.models import Draft, DraftCitation, FactCard, QualityIssue, ReferenceCase, Strategy
+from workbench.db.models import Draft, DraftCitation, FactCard, FactSource, QualityIssue, ReferenceCase, Strategy
 from workbench.facts.eligibility import get_eligible_facts
 from workbench.quality.scanner import scan_content
 
@@ -17,7 +17,10 @@ def run_quality_check(session: Session, provider: AIProvider, draft_id: str) -> 
         raise LookupError(draft_id)
     sourced_terms = set(
         session.scalars(
-            select(FactCard.content).join(DraftCitation, DraftCitation.fact_id == FactCard.id).where(DraftCitation.draft_id == draft_id)
+            select(FactCard.content)
+            .join(DraftCitation, DraftCitation.fact_id == FactCard.id)
+            .join(FactSource, FactSource.fact_id == FactCard.id)
+            .where(DraftCitation.draft_id == draft_id, FactCard.status == "CONFIRMED", FactCard.conflict_group.is_(None))
         ).all()
     )
     pending_terms = set(session.scalars(select(FactCard.content).where(FactCard.project_id == draft.project_id, FactCard.status == "PENDING")).all())

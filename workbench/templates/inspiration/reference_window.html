@@ -4,7 +4,7 @@
     {% for slot in range(3) %}
       {% set item = references[slot] if slot < references|length else none %}
       <article class="reference-card{% if not item %} is-empty{% endif %}">
-        {% if item %}<span>{{ item.input_type }}</span><h3>{{ item.source_label or '未命名案例' }}</h3><p>{{ item.raw_text[:90] }}</p><small>{{ item.status }}</small>
+        {% if item %}<span>{{ item.input_type }}</span><h3>{{ item.source_label or '未命名案例' }}</h3><p>{{ item.raw_text[:90] }}</p><small>{{ item.status }}</small><button class="text-button" data-analyze-reference="{{ item.id }}" type="button">分析表达方法</button>
         {% else %}<span>EMPTY SLOT {{ slot + 1 }}</span><h3>添加参考案例</h3><p>粘贴文本或上传截图；链接不会自动抓取。</p>{% endif %}
       </article>
     {% endfor %}

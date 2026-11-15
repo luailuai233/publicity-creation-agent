@@ -10,6 +10,7 @@ from workbench.jobs.models import JobCreate
 from workbench.jobs.repository import enqueue_job
 from workbench.materials.limits import validate_upload
 from workbench.storage.local import LocalStorage
+from workbench.drafts.service import invalidate_project_checks
 
 
 def project_usage(session: Session, project_id: str) -> tuple[int, int]:
@@ -63,6 +64,7 @@ def delete_material(session: Session, storage: LocalStorage, material_id: str) -
             .where(SourceChunk.material_id == material_id)
         ).all()
     )
+    project_id = material.project_id
     if material.path:
         storage.delete_file(Path(material.path))
     session.delete(material)
@@ -73,4 +75,5 @@ def delete_material(session: Session, storage: LocalStorage, material_id: str) -
             fact = session.get(FactCard, fact_id)
             if fact is not None:
                 fact.status = "PENDING"
+    invalidate_project_checks(session, project_id)
     session.commit()

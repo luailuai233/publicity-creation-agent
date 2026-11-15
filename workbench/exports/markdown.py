@@ -32,9 +32,10 @@ def write_markdown_export(session: Session, draft_id: str, exports_root: Path, c
     root = exports_root.resolve()
     root.mkdir(parents=True, exist_ok=True)
     project = session.get(Project, draft.project_id)
-    target = (root / f"{_slug(project.name)}-v{draft.version}.md").resolve()
+    target = (root / f"{_slug(project.name)}-{project.id[:8]}-v{draft.version}.md").resolve()
     if root not in target.parents:
         raise ExportBlocked("导出路径不安全")
-    content = draft.content.strip() + "\n\n---\n\n> 本文由本地 Demo 工作台整理，关键事实以已确认素材为准。\n"
+    public_content = re.sub(r"<!--\s*block:[\w-]+\s*-->\s*", "", draft.content).strip()
+    content = public_content + "\n\n---\n\n> 本文由本地 Demo 工作台整理，关键事实以已确认素材为准。\n"
     target.write_text(content, encoding="utf-8")
     return target

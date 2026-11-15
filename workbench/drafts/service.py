@@ -1,9 +1,9 @@
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from workbench.ai.provider import AIProvider
 from workbench.ai.schemas.draft import OutlineResult
-from workbench.db.models import Draft, DraftCitation, Strategy
+from workbench.db.models import Draft, DraftCitation, QualityIssue, Strategy
 from workbench.drafts.citations import fact_has_source
 from workbench.drafts.schemas import DraftPatch
 from workbench.facts.eligibility import get_eligible_facts
@@ -11,6 +11,13 @@ from workbench.facts.eligibility import get_eligible_facts
 
 class DraftNeedsReview(RuntimeError):
     pass
+
+
+def invalidate_project_checks(session: Session, project_id: str) -> None:
+    draft_ids = list(session.scalars(select(Draft.id).where(Draft.project_id == project_id)).all())
+    if draft_ids:
+        session.execute(delete(QualityIssue).where(QualityIssue.draft_id.in_(draft_ids)))
+        session.execute(update(Draft).where(Draft.id.in_(draft_ids)).values(status="DRAFT"))
 
 
 def _selected_strategy(session: Session, project_id: str) -> Strategy:
@@ -61,8 +68,12 @@ def save_draft(session: Session, draft_id: str, patch: DraftPatch) -> Draft:
     draft = session.get(Draft, draft_id)
     if draft is None:
         raise LookupError(draft_id)
-    for key, value in patch.model_dump(exclude_none=True).items():
+    changes = patch.model_dump(exclude_none=True)
+    for key, value in changes.items():
         setattr(draft, key, value)
+    if any(key in changes for key in ("title", "outline", "content")):
+        draft.status = "DRAFT"
+        session.execute(delete(QualityIssue).where(QualityIssue.draft_id == draft.id))
     session.commit()
     session.refresh(draft)
     return draft

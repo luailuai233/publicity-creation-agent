@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from workbench.db.models import FactCard, FactSource, Material, SourceChunk
 from workbench.facts.schemas import ConflictResolution, FactPatch
+from workbench.drafts.service import invalidate_project_checks
 
 
 class FactNotFoundError(LookupError):
@@ -45,6 +46,7 @@ def update_fact(session: Session, fact_id: str, patch: FactPatch) -> FactCard:
         if patch.status == "CONFIRMED":
             _validate_confirmation(session, fact)
         fact.status = patch.status
+    invalidate_project_checks(session, fact.project_id)
     session.commit()
     session.refresh(fact)
     return fact
@@ -61,6 +63,7 @@ def resolve_conflict(session: Session, group_id: str, resolution: ConflictResolu
     for fact in facts:
         fact.status = "CONFIRMED" if fact.id == chosen.id else "INVALID"
         fact.conflict_group = None
+    invalidate_project_checks(session, chosen.project_id)
     session.commit()
     session.refresh(chosen)
     return chosen

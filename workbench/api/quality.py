@@ -1,3 +1,4 @@
+from typing import Literal
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
@@ -12,7 +13,7 @@ router = APIRouter(tags=["quality"])
 
 
 class IssuePatch(BaseModel):
-    status: str
+    status: Literal["OPEN", "RESOLVED", "ACCEPTED"]
 
 
 def serialize(issue: QualityIssue) -> dict:

@@ -2,7 +2,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from workbench.ai.provider import AIProvider
-from workbench.db.models import ReferenceAnalysis, ReferenceCase, Strategy
+from workbench.db.models import Draft, ReferenceAnalysis, ReferenceCase, Strategy
 from workbench.facts.eligibility import get_eligible_facts
 from workbench.strategies.difference import validate_strategy_set
 
@@ -29,7 +29,12 @@ def generate_strategies(session: Session, provider: AIProvider, project_id: str)
     difference = validate_strategy_set(envelope.result.strategies)
     if not difference.valid:
         raise StrategyNeedsReview("；".join(difference.errors))
-    session.execute(delete(Strategy).where(Strategy.project_id == project_id))
+    used_ids = list(session.scalars(select(Draft.strategy_id).where(Draft.project_id == project_id)).all())
+    session.execute(update(Strategy).where(Strategy.project_id == project_id).values(selected=False))
+    removable = delete(Strategy).where(Strategy.project_id == project_id)
+    if used_ids:
+        removable = removable.where(Strategy.id.not_in(used_ids))
+    session.execute(removable)
     persisted = []
     for item in envelope.result.strategies:
         strategy = Strategy(project_id=project_id, **item.model_dump(), selected=False, is_demo=True)

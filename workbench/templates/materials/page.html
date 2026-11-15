@@ -22,7 +22,7 @@
       {% include "facts/source_dialog.html" %}
     </section>
   </main>
-  <footer class="bottom-taskbar"><span>{{ materials|length }} 个素材</span><a class="primary-action system-button" href="#facts">确认活动事实</a></footer>
+  <footer class="bottom-taskbar"><span data-workflow-status>{{ materials|length }} 个素材</span><button class="primary-action system-button" data-confirm-facts="{{ project.id }}" type="button">确认事实并继续</button></footer>
 </div>
 <script defer src="{{ url_for('static', path='js/materials.js') }}"></script>
 {% endblock %}

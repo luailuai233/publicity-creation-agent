@@ -53,14 +53,14 @@ async def create(
 
         incoming.append(StarletteUploadFile(filename="粘贴文本.txt", file=BytesIO(pasted_text.encode("utf-8")), headers={"content-type": "text/plain"}))
     results = []
-    try:
-        for upload in incoming:
+    for upload in incoming:
+        try:
             payload = await upload.read()
             material, job = create_file_material(session, storage, project_id, upload.filename or "material", upload.content_type or "application/octet-stream", payload)
             background_tasks.add_task(run_material_job, request.app.state.session_factory, job.id)
             results.append({"material": serialize_material(material), "job": JobRead.model_validate(job).model_dump(mode="json")})
-    except MaterialValidationError as error:
-        return api_error(error.code, error.message, 400)
+        except MaterialValidationError as error:
+            results.append({"file_name": upload.filename or "material", "error": {"code": error.code, "message": error.message}})
     return api_response(results, status_code=201)
 
 

@@ -26,6 +26,8 @@ def _blocks(content: str) -> list[tuple[str, str]]:
     if not markers:
         return [("document", content)]
     result = []
+    if markers[0].start() > 0:
+        result.append(("document", content[:markers[0].start()]))
     for index, marker in enumerate(markers):
         end = markers[index + 1].start() if index + 1 < len(markers) else len(content)
         result.append((marker.group(1), content[marker.end():end]))

@@ -1,38 +1,35 @@
-def unwrap(response):
-    assert response.status_code < 400, response.text
-    return response.json()["data"]
+import os
+
+from playwright.sync_api import sync_playwright
 
 
-def test_resettable_demo_runs_from_sources_to_markdown_export(demo_client) -> None:
-    client, root = demo_client
-    demo = unwrap(client.post("/api/demo/reset"))
-    project_id = demo["project_id"]
-    assert len(demo["materials"]) == 3
-    assert len(demo["references"]) == 3
-
-    facts = unwrap(client.get(f"/api/projects/{project_id}/facts"))
-    assert all(fact["sources"] for fact in facts)
-    conflicting = [fact for fact in facts if fact["conflict_group"]]
-    chosen = conflicting[0]
-    unwrap(client.post(f"/api/facts/conflicts/{chosen['conflict_group']}/resolve", json={"fact_id": chosen["id"]}))
-
-    for reference in demo["references"]:
-        analyzed = unwrap(client.post(f"/api/references/{reference['id']}/analyze"))
-        assert analyzed["analysis"]["transferable"]
-
-    strategies = unwrap(client.post(f"/api/projects/{project_id}/strategies/generate"))
-    selected = unwrap(client.patch(f"/api/strategies/{strategies[0]['id']}/select", json={}))
-    assert selected["selected"] is True
-    outline = unwrap(client.post(f"/api/projects/{project_id}/drafts/outline"))
-    draft = unwrap(client.post(f"/api/projects/{project_id}/drafts/generate", json={"title": outline["titles"][0], "outline": outline["outline"]}))
-    saved = unwrap(client.patch(f"/api/drafts/{draft['id']}", json={"content": draft["content"] + "\n\n人工复核完成。"}))
-    assert saved["version"] == 1
-    assert saved["content"].endswith("人工复核完成。")
-    unwrap(client.post(f"/api/drafts/{saved['id']}/check"))
-    exported = unwrap(client.post(f"/api/drafts/{saved['id']}/export", json={"confirm_high": True}))
-    export_path = root / "exports" / exported["file_name"]
-    assert export_path.is_file()
-    assert export_path.parent == (root / "exports").resolve()
-    text = export_path.read_text(encoding="utf-8")
-    assert "provider" not in text and "fact_id" not in text
-
+def test_browser_runs_complete_demo_chain_and_exports_markdown(live_server) -> None:
+    base_url, root = live_server
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, executable_path=os.environ.get("PLAYWRIGHT_EXECUTABLE_PATH"), args=[f"--disk-cache-dir={os.environ['PLAYWRIGHT_BROWSER_CACHE']}"])
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.goto(base_url)
+        page.locator("[data-demo-reset] button").click()
+        page.wait_for_url("**/materials")
+        page.locator("[data-confirm-facts]").click()
+        page.wait_for_url("**/inspiration")
+        page.locator("[data-generate-strategies]").click()
+        page.wait_for_url("**/strategy")
+        page.locator("[data-select-strategy]").first.click()
+        page.locator("[data-open-editor]").click()
+        page.wait_for_url("**/editor")
+        page.locator("[data-generate-draft]").click()
+        page.wait_for_selector("[data-editor]")
+        page.locator("[data-editor]").fill(page.locator("[data-editor]").input_value() + "\n\n人工复核完成。")
+        page.wait_for_timeout(2200)
+        page.locator("[data-enter-quality]").click()
+        page.wait_for_url("**/export")
+        page.locator("[data-run-check]").click()
+        page.wait_for_selector("[data-export-draft]:not([disabled])")
+        page.locator("[data-export-draft]").click()
+        page.wait_for_function("document.querySelector('[data-export-path]').textContent.includes('已保存')")
+        exports = list((root / "exports").glob("*.md"))
+        assert len(exports) == 1
+        assert "人工复核完成" in exports[0].read_text(encoding="utf-8")
+        assert "<!-- block:" not in exports[0].read_text(encoding="utf-8")
+        browser.close()
