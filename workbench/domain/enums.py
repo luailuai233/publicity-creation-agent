@@ -56,3 +56,30 @@ class JobStatus(str, Enum):
     PROCESSING = "PROCESSING"
     DONE = "DONE"
     FAILED = "FAILED"
+
+
+class AgentRunStatus(str, Enum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    PAUSED = "PAUSED"
+    WAITING_USER = "WAITING_USER"
+    COMPLETED = "COMPLETED"
+    PARTIAL = "PARTIAL"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
+class AgentStepStatus(str, Enum):
+    QUEUED = "QUEUED"
+    PROCESSING = "PROCESSING"
+    DONE = "DONE"
+    FAILED = "FAILED"
+    SKIPPED = "SKIPPED"
+
+
+class AgentMessageType(str, Enum):
+    PLAN = "PLAN"
+    STATUS = "STATUS"
+    QUESTION = "QUESTION"
+    USER_ANSWER = "USER_ANSWER"
+    RESULT = "RESULT"

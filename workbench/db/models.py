@@ -9,7 +9,7 @@ from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from workbench.db.base import Base
-from workbench.domain.enums import FactStatus, JobStatus, MaterialCategory, ParseStatus, ProjectStatus
+from workbench.domain.enums import AgentRunStatus, AgentStepStatus, FactStatus, JobStatus, MaterialCategory, ParseStatus, ProjectStatus
 
 
 def new_id() -> str:
@@ -30,6 +30,9 @@ class Project(Base):
     length_min: Mapped[int] = mapped_column(Integer, default=1200)
     length_max: Mapped[int] = mapped_column(Integer, default=1600)
     status: Mapped[str] = mapped_column(String(32), default=ProjectStatus.MATERIALS.value)
+    goal: Mapped[str] = mapped_column(Text, default="")
+    decisions: Mapped[dict] = mapped_column(JSON, default=dict)
+    revision: Mapped[int] = mapped_column(Integer, default=0)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     sort_order: Mapped[int] = mapped_column(BigInteger, default=time.time_ns, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
@@ -38,6 +41,7 @@ class Project(Base):
     materials: Mapped[list[Material]] = relationship(back_populates="project", cascade="all, delete-orphan")
     references: Mapped[list[ReferenceCase]] = relationship(back_populates="project", cascade="all, delete-orphan")
     facts: Mapped[list[FactCard]] = relationship(back_populates="project", cascade="all, delete-orphan")
+    agent_runs: Mapped[list[AgentRun]] = relationship(back_populates="project", cascade="all, delete-orphan")
 
 
 class Material(Base):
@@ -170,6 +174,8 @@ class Draft(Base):
     content: Mapped[str] = mapped_column(Text, default="")
     version: Mapped[int] = mapped_column(Integer, default=1)
     status: Mapped[str] = mapped_column(String(32), default="DRAFT")
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+    quality_status: Mapped[str] = mapped_column(String(32), default="NOT_CHECKED")
     is_current: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
@@ -227,3 +233,65 @@ class EventLog(Base):
     event_name: Mapped[str] = mapped_column(String(120))
     properties: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class AgentRun(Base):
+    __tablename__ = "agent_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(32), default=AgentRunStatus.QUEUED.value, index=True)
+    goal: Mapped[str] = mapped_column(Text)
+    plan_summary: Mapped[str] = mapped_column(Text, default="")
+    current_stage: Mapped[str] = mapped_column(String(120), default="")
+    tool_call_count: Mapped[int] = mapped_column(Integer, default=0)
+    revision_count: Mapped[int] = mapped_column(Integer, default=0)
+    max_tool_calls: Mapped[int] = mapped_column(Integer, default=12)
+    max_revisions: Mapped[int] = mapped_column(Integer, default=1)
+    waiting_reason: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    waiting_payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    error_code: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False)
+    pause_requested: Mapped[bool] = mapped_column(Boolean, default=False)
+    active_key: Mapped[Optional[str]] = mapped_column(String(36), unique=True, nullable=True)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    project: Mapped[Project] = relationship(back_populates="agent_runs")
+    steps: Mapped[list[AgentStep]] = relationship(back_populates="run", cascade="all, delete-orphan")
+    messages: Mapped[list[AgentMessage]] = relationship(back_populates="run", cascade="all, delete-orphan")
+
+
+class AgentStep(Base):
+    __tablename__ = "agent_steps"
+    __table_args__ = (UniqueConstraint("run_id", "sequence", name="uq_agent_step_run_sequence"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    run_id: Mapped[str] = mapped_column(ForeignKey("agent_runs.id", ondelete="CASCADE"), index=True)
+    sequence: Mapped[int] = mapped_column(Integer)
+    tool_name: Mapped[str] = mapped_column(String(80))
+    status: Mapped[str] = mapped_column(String(32), default=AgentStepStatus.QUEUED.value)
+    input_fingerprint: Mapped[str] = mapped_column(String(64), default="", index=True)
+    input_summary: Mapped[str] = mapped_column(Text, default="")
+    output_summary: Mapped[str] = mapped_column(Text, default="")
+    result_ref: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_code: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    run: Mapped[AgentRun] = relationship(back_populates="steps")
+
+
+class AgentMessage(Base):
+    __tablename__ = "agent_messages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    run_id: Mapped[str] = mapped_column(ForeignKey("agent_runs.id", ondelete="CASCADE"), index=True)
+    type: Mapped[str] = mapped_column(String(32))
+    content: Mapped[str] = mapped_column(Text)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    run: Mapped[AgentRun] = relationship(back_populates="messages")
