@@ -53,7 +53,7 @@ def generate_draft(session: Session, provider: AIProvider, project_id: str, titl
     session.execute(update(Draft).where(Draft.project_id == project_id).values(is_current=False))
     draft = Draft(
         project_id=project_id, strategy_id=strategy.id, title=title, outline=outline,
-        content=envelope.result.content, version=int(current_version) + 1, status="DRAFT", is_current=True,
+        content=envelope.result.content, version=int(current_version) + 1, status="DRAFT", quality_status="NOT_CHECKED", is_current=True,
     )
     session.add(draft)
     session.flush()
@@ -73,6 +73,8 @@ def save_draft(session: Session, draft_id: str, patch: DraftPatch) -> Draft:
         setattr(draft, key, value)
     if any(key in changes for key in ("title", "outline", "content")):
         draft.status = "DRAFT"
+        draft.quality_status = "STALE"
+        draft.revision += 1
         session.execute(delete(QualityIssue).where(QualityIssue.draft_id == draft.id))
     session.commit()
     session.refresh(draft)

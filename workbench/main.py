@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from workbench.ai.mock_provider import MockAIProvider
 from workbench.agent.recovery import recover_agent_runs
 from workbench.agent.runner import AgentRunner
-from workbench.agent.tools.registry import ToolRegistry
+from workbench.agent.tools.registry import build_default_registry
 from workbench.api.agent_runs import router as agent_runs_api_router
 from workbench.api.references import router as references_api_router
 from workbench.api.strategies import router as strategies_api_router
@@ -59,7 +59,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     application.state.engine = engine
     application.state.session_factory = session_factory
     application.state.ai_provider = MockAIProvider(delay_ms=effective_settings.mock_ai_delay_ms)
-    application.state.agent_registry = ToolRegistry()
+    application.state.agent_registry = build_default_registry()
     application.state.agent_runner = AgentRunner(
         session_factory,
         application.state.agent_registry,

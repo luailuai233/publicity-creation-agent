@@ -80,6 +80,7 @@ class MockAIProvider:
         for attempt in range(2):
             fault = self.faults.next("strategy")
             payload = {} if fault == "schema_error" else {
+                "recommended_index": 0,
                 "strategies": [
                     {
                         "name": names[index],
@@ -153,6 +154,7 @@ class MockAIProvider:
                 "沿着时间线，重回那片温暖现场",
             ],
             "outline": ["现场细节与活动背景", "人物行动和关键事实", "变化与共同价值", "克制回扣与后续期待"],
+            "recommended_title_index": 0,
         }
         return self._validated_envelope("outline", OutlineResult, payload, [fact["id"] for fact in facts])
 

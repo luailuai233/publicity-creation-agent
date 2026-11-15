@@ -139,7 +139,7 @@ class AgentRunner:
                         {
                             "project_id": run.project_id,
                             "run_id": run.id,
-                            "mode": "revision" if run.revision_count else "initial",
+                            "mode": "revision" if snapshot.auto_fixable_issue_count and run.revision_count < run.max_revisions else "initial",
                         }
                     )
                     result = tool.execute(

@@ -1,6 +1,6 @@
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class StrategyResult(BaseModel):
@@ -15,3 +15,4 @@ class StrategyResult(BaseModel):
 
 class StrategySetResult(BaseModel):
     strategies: List[StrategyResult]
+    recommended_index: int = Field(default=0, ge=0, le=2)

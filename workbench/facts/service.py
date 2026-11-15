@@ -67,3 +67,19 @@ def resolve_conflict(session: Session, group_id: str, resolution: ConflictResolu
     session.commit()
     session.refresh(chosen)
     return chosen
+
+
+def auto_confirm_safe_facts(session: Session, project_id: str) -> list[FactCard]:
+    facts = list(session.scalars(select(FactCard).where(FactCard.project_id == project_id, FactCard.status == "PENDING")).all())
+    confirmed = []
+    for fact in facts:
+        if fact.conflict_group or fact.confidence < 0.7 or fact.type in {"PERSON", "ROLE"}:
+            continue
+        try:
+            _validate_confirmation(session, fact)
+        except FactTransitionError:
+            continue
+        fact.status = "CONFIRMED"
+        confirmed.append(fact)
+    session.commit()
+    return confirmed

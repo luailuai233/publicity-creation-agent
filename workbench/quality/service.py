@@ -36,12 +36,14 @@ def run_quality_check(session: Session, provider: AIProvider, draft_id: str) -> 
     envelope = provider.check_quality(draft.content, facts, [strategy.method_summary] if strategy else [])
     if envelope.status != "DONE" or envelope.result is None:
         draft.status = "CHECK_INCOMPLETE"
+        draft.quality_status = "FAILED"
         session.commit()
         raise QualityCheckIncomplete("检查未完成，请重试后再导出")
     for suggestion in envelope.result.issues:
-        issue = QualityIssue(draft_id=draft_id, **suggestion.model_dump(), status="OPEN")
+        issue = QualityIssue(draft_id=draft_id, **suggestion.model_dump(exclude={"auto_fixable"}), status="OPEN")
         session.add(issue)
         issues.append(issue)
     draft.status = "CHECKED"
+    draft.quality_status = "BLOCKED" if any(issue.type in {"MISSING_SOURCE", "FACT_CONFLICT"} and issue.status == "OPEN" for issue in issues) else "PASSED"
     session.commit()
     return issues

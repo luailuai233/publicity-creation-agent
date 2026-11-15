@@ -28,3 +28,24 @@ class ToolRegistry:
 
     def names(self) -> tuple[str, ...]:
         return tuple(self._tools)
+
+
+def build_default_registry() -> ToolRegistry:
+    from workbench.agent.tools.content import GenerateContentTool
+    from workbench.agent.tools.facts import ValidateFactsTool
+    from workbench.agent.tools.materials import ParseMaterialsTool
+    from workbench.agent.tools.quality import CheckQualityTool
+    from workbench.agent.tools.references import AnalyzeReferencesTool
+    from workbench.agent.tools.strategies import PlanStrategiesTool
+
+    registry = ToolRegistry()
+    for tool in (
+        ParseMaterialsTool(),
+        ValidateFactsTool(),
+        AnalyzeReferencesTool(),
+        PlanStrategiesTool(),
+        GenerateContentTool(),
+        CheckQualityTool(),
+    ):
+        registry.register(tool)
+    return registry

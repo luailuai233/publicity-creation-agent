@@ -8,6 +8,7 @@ class QualitySuggestion(BaseModel):
     severity: str
     block_id: str
     message: str
+    auto_fixable: bool = False
 
 
 class QualityResult(BaseModel):
