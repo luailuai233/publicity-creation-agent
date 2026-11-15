@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 
-from workbench.ai.mock_provider import MockAIProvider
+from workbench.ai.factory import create_ai_provider
 from workbench.agent.recovery import recover_agent_runs
 from workbench.agent.runner import AgentRunner
 from workbench.agent.tools.registry import build_default_registry
@@ -58,7 +58,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     application.state.settings = effective_settings
     application.state.engine = engine
     application.state.session_factory = session_factory
-    application.state.ai_provider = MockAIProvider(delay_ms=effective_settings.mock_ai_delay_ms)
+    application.state.ai_provider = create_ai_provider(effective_settings)
     application.state.agent_registry = build_default_registry()
     application.state.agent_runner = AgentRunner(
         session_factory,
