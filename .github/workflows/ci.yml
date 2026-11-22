@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.12"]
+    runs-on: ${{ matrix.os }}
+    env:
+      AI_PROVIDER: mock
+      WORKBENCH_ROOT: ${{ runner.temp }}/workbench-runtime
+      DATABASE_URL: sqlite:///${{ runner.temp }}/workbench-runtime/storage/app.db
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: requirements.lock.txt
+      - name: Install locked dependencies
+        run: python -m pip install -r requirements.lock.txt
+      - name: Prepare runtime directories
+        run: python -c "import os; from pathlib import Path; root = Path(os.environ['WORKBENCH_ROOT']); (root / 'storage').mkdir(parents=True, exist_ok=True)"
+      - name: Upgrade database
+        run: python -m alembic upgrade head
+      - name: Unit and integration tests
+        run: python -m pytest tests/unit tests/integration -q
+      - name: Import and startup smoke test
+        run: python -c "from workbench.main import create_app; assert create_app().title"
+
+  quality:
+    runs-on: ubuntu-latest
+    env:
+      AI_PROVIDER: mock
+      WORKBENCH_ROOT: ${{ runner.temp }}/workbench-runtime
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/playwright-browsers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock.txt
+      - run: python -m pip install -r requirements.lock.txt
+      - name: Ruff
+        run: python -m ruff check workbench tests
+      - name: Install Playwright browser
+        run: python -m playwright install --with-deps chromium
+      - name: Key end-to-end flows
+        run: python -m pytest tests/e2e -q
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2

@@ -24,13 +24,22 @@ class ParseMaterialsTool:
         failed = 0
         for material in materials:
             try:
-                result = parse_path(Path(material.path), material.mime_type)
+                result = parse_path(Path(material.path), material.mime_type, image_provider=context.provider)
                 material.parsed_text = result.text
                 material.summary = result.summary
                 material.category = result.category
                 material.parse_status = result.status
                 context.session.execute(delete(SourceChunk).where(SourceChunk.material_id == material.id))
-                context.session.add(SourceChunk(material_id=material.id, content=result.text, paragraph=1))
+                for chunk in result.chunks:
+                    context.session.add(
+                        SourceChunk(
+                            material_id=material.id,
+                            content=chunk.content,
+                            page=chunk.page,
+                            paragraph=chunk.paragraph,
+                            bbox={"location": chunk.location} if chunk.location else None,
+                        )
+                    )
             except Exception:
                 material.parse_status = "FAILED"
                 failed += 1

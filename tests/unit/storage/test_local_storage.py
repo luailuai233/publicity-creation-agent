@@ -28,3 +28,25 @@ def test_storage_rejects_unsafe_project_identifiers(tmp_path: Path, project_id: 
 
     with pytest.raises(UnsafeStoragePathError):
         storage.save_material_file(project_id, "safe.txt", BytesIO(b"data"))
+
+
+def test_storage_rejects_delete_through_symlink_outside_root(tmp_path: Path) -> None:
+    storage = LocalStorage(tmp_path / "projects")
+    storage.uploads_root.mkdir(parents=True)
+    outside = tmp_path / "outside.txt"; outside.write_text("keep", encoding="utf-8")
+    link = storage.uploads_root / "link.txt"
+    try:
+        link.symlink_to(outside)
+    except OSError:
+        pytest.skip("当前 Windows 环境不允许创建符号链接")
+
+    with pytest.raises(UnsafeStoragePathError):
+        storage.delete_file(link)
+    assert outside.exists()
+
+
+def test_repository_ignores_all_runtime_and_sensitive_artifacts() -> None:
+    root = Path(__file__).resolve().parents[3]
+    ignored = (root / ".gitignore").read_text(encoding="utf-8")
+    for pattern in (".env", "*.db", "storage/", "exports/", ".runtime/", "test-results/", "*.log", ".playwright/"):
+        assert pattern in ignored

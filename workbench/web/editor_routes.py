@@ -10,6 +10,7 @@ from workbench.db.models import Draft, Strategy
 from workbench.db.projects import get_project
 from workbench.facts.eligibility import get_eligible_facts
 from workbench.web.dependencies import get_session
+from workbench.web.project_navigation import build_project_navigation
 
 
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parents[1] / "templates"))
@@ -24,5 +25,5 @@ def page(project_id: str, request: Request, session: Session = Depends(get_sessi
     facts = get_eligible_facts(session, project_id)
     return templates.TemplateResponse(
         request=request, name="editor/page.html",
-        context={"project": project, "strategy": strategy, "draft": draft, "facts": facts},
+        context={"project": project, "strategy": strategy, "draft": draft, "facts": facts, "navigation": build_project_navigation(session, project_id, request.url.path)},
     )

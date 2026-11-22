@@ -8,7 +8,9 @@ from sqlalchemy.orm import Session
 
 from workbench.db.models import FactCard, Material
 from workbench.db.projects import get_project
+from workbench.facts.service import load_conflict_details
 from workbench.web.dependencies import get_session
+from workbench.web.project_navigation import build_project_navigation
 
 
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parents[1] / "templates"))
@@ -33,5 +35,30 @@ def page(project_id: str, request: Request, session: Session = Depends(get_sessi
             "selected": materials[0] if materials else None,
             "facts": facts,
             "conflicts": conflicts,
+            "conflict_details": load_conflict_details(session, project_id),
+            "navigation": build_project_navigation(session, project_id, request.url.path),
+        },
+    )
+
+
+@router.get("/project/{project_id}/facts", response_class=HTMLResponse)
+def facts_page(project_id: str, request: Request, session: Session = Depends(get_session)):
+    project = get_project(session, project_id)
+    facts = list(session.scalars(select(FactCard).where(FactCard.project_id == project_id).order_by(FactCard.created_at)).all())
+    conflicts = {}
+    for fact in facts:
+        if fact.status == "CONFLICT" and fact.conflict_group:
+            conflicts.setdefault(fact.conflict_group, []).append(fact)
+    navigation = build_project_navigation(session, project_id, request.url.path)
+    return templates.TemplateResponse(
+        request=request,
+        name="facts/page.html",
+        context={
+            "project": project,
+            "facts": facts,
+            "conflicts": conflicts,
+            "conflict_details": load_conflict_details(session, project_id),
+            "navigation": navigation,
+            "prerequisite": navigation.items[2].prerequisite,
         },
     )

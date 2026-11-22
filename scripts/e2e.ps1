@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'runtime-env.ps1')
 
-$VenvPython = Join-Path $ProjectRoot '.venv\Scripts\python.exe'
-& $VenvPython -m pytest tests/e2e @args
+$VenvPython = Assert-WorkbenchVenv
+$TestTemp = Join-Path $env:TEMP ("pytest-e2e-" + [Guid]::NewGuid().ToString("N"))
+& $VenvPython -m pytest --basetemp $TestTemp tests/e2e @args
 exit $LASTEXITCODE

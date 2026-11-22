@@ -1,7 +1,11 @@
 <section class="retro-window analysis-window">
-  <header class="window-titlebar"><span>AI 机制分析器</span><span class="demo-badge">Demo 模拟结果</span></header>
+  <header class="window-titlebar"><span>AI 机制分析器</span></header>
   <div class="window-content mechanism-stack">
-    {% set mechanisms = [('标题钩子','从具体细节或克制提问进入'),('情绪与反差','行动先于判断，反差服务于变化'),('叙事结构','现场—人物—变化—价值回扣'),('图片作用','提供场景证据与阅读停顿')] %}
-    {% for title, content in mechanisms %}<article class="mechanism-card"><h3>{{ title }}</h3><p>{{ content }}</p><p>依据来自所选案例片段，不进入活动事实库。</p><button class="text-button" type="button">查看依据</button></article>{% endfor %}
+    {% if active_analysis %}
+      {% set mechanisms = [('标题钩子', active_analysis.hook), ('情绪与反差', active_analysis.emotion), ('叙事结构', active_analysis.structure), ('图片作用', active_analysis.image_role)] %}
+      {% for title, content in mechanisms %}<article class="mechanism-card"><h3>{{ title }}</h3><p>{{ content }}</p><p>依据来自当前案例正文，不进入活动事实库。</p></article>{% endfor %}
+    {% else %}
+      <article class="mechanism-card"><h3>等待分析结果</h3><p>请先在左侧添加案例并点击“分析表达方法”。</p></article>
+    {% endif %}
   </div>
 </section>

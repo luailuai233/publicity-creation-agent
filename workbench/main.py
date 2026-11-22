@@ -1,4 +1,7 @@
 import asyncio
+import logging
+import time
+from uuid import uuid4
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -32,6 +35,7 @@ from workbench.web.strategy_routes import router as strategy_page_router
 from workbench.web.editor_routes import router as editor_page_router
 from workbench.web.export_routes import router as export_page_router
 from workbench.jobs.recovery import recover_stale_jobs
+from workbench.logging import log_event
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
@@ -65,6 +69,41 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         application.state.agent_registry,
         provider=application.state.ai_provider,
     )
+
+    @application.middleware("http")
+    async def public_site_safety(request: Request, call_next):
+        if effective_settings.app_env == "production":
+            content_length = request.headers.get("content-length")
+            if content_length:
+                try:
+                    too_large = int(content_length) > effective_settings.max_request_body_bytes
+                except ValueError:
+                    too_large = True
+                if too_large:
+                    response = api_error("REQUEST_TOO_LARGE", "请求内容超过服务器限制", 413)
+                else:
+                    response = await call_next(request)
+            else:
+                response = await call_next(request)
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["Referrer-Policy"] = "no-referrer"
+            response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+            return response
+        return await call_next(request)
+
+    @application.middleware("http")
+    async def request_trace(request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID") or str(uuid4())
+        started = time.perf_counter()
+        try:
+            response = await call_next(request)
+        except Exception:
+            log_event(logging.getLogger("workbench.request"), "request", request_id=request_id, method=request.method, path=request.url.path, status="ERROR", duration_ms=int((time.perf_counter() - started) * 1000))
+            raise
+        response.headers["X-Request-ID"] = request_id
+        log_event(logging.getLogger("workbench.request"), "request", request_id=request_id, method=request.method, path=request.url.path, status=response.status_code, duration_ms=int((time.perf_counter() - started) * 1000))
+        return response
     application.mount(
         "/static",
         StaticFiles(directory=str(PACKAGE_ROOT / "static")),

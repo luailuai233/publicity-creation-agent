@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% block title %}推文日志 · {{ project.name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', path='css/editor.css') }}">{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', path='css/editor.css') }}?v={{ static_version }}">{% endblock %}
 {% block body %}
-<div class="retro-desktop">
+<div class="retro-desktop has-workflow-navigation">
   {% include "components/topbar.html" %}
-  {% include "components/dock.html" %}
+  {% include "components/workflow_nav.html" %}
   <main class="desktop-canvas editor-layout">
     {% include "editor/material_drawer.html" %}
     <section class="editor-center">{% include "editor/journal_editor.html" %}{% include "editor/statusbar.html" %}</section>
-    <aside class="editor-suggestions"><h2>编辑建议</h2><span class="demo-badge">Demo 模拟结果</span><p>{{ strategy.name if strategy else '尚未选择策略' }}</p><p>关键事实均需保留来源标记。</p></aside>
+    <aside class="editor-suggestions"><h2>编辑建议</h2><p>{{ strategy.name if strategy else '尚未选择策略' }}</p><p>关键事实均需保留来源标记。</p></aside>
   </main>
-  <footer class="bottom-taskbar"><span>{{ project.name }} · 2 秒自动保存</span><a class="primary-action system-button" data-enter-quality href="/project/{{ project.id }}/export" {% if not draft %}aria-disabled="true"{% endif %}>进入系统检查</a></footer>
+  <footer class="bottom-taskbar"><span>{{ project.name }} · 推文编辑器</span><a class="primary-action system-button" data-enter-quality href="/project/{{ project.id }}/export" {% if not draft %}aria-disabled="true"{% endif %}>进入系统检查</a></footer>
 </div>
-<script defer src="{{ url_for('static', path='js/editor.js') }}"></script>
+<script defer src="{{ url_for('static', path='js/editor.js') }}?v={{ static_version }}"></script>
 {% endblock %}

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from workbench.db.base import Base
 from workbench.db.projects import (

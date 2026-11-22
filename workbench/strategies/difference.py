@@ -13,12 +13,13 @@ def validate_strategy_set(strategies: list[StrategyResult]) -> DifferenceResult:
     errors = []
     if len(strategies) != 3:
         errors.append("需要恰好 3 个策略")
-    if len({item.name for item in strategies}) < 2:
-        errors.append("叙事视角不足 2 种")
-    if len({item.opening for item in strategies}) < 2:
-        errors.append("开头方式不足 2 种")
-    if len({item.structure for item in strategies}) < 2:
-        errors.append("文章结构不足 2 种")
+    dimensions = (
+        len({item.protagonist for item in strategies}) > 1,
+        len({item.opening for item in strategies}) > 1,
+        len({item.structure for item in strategies}) > 1,
+    )
+    if sum(dimensions) < 2:
+        errors.append("叙事主角、开头方式和文章结构至少需要两个维度存在实质差异")
     if len({tuple(sorted(item.fact_ids)) for item in strategies}) < 2:
         errors.append("事实集合不能完全相同")
     return DifferenceResult(valid=not errors, errors=errors)

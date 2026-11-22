@@ -1,0 +1,8 @@
+<div class="strategy-generation-cta">
+  {% if can_generate_strategies %}
+  <button class="primary-action system-button" data-generate-strategies="{{ project.id }}" type="button">生成 3 个创作策略</button>
+  {% else %}
+  <span>生成策略前还需要活动事实和具体细节事实。</span>
+  <a class="primary-action system-button" href="/project/{{ project.id }}/agent">先让 Agent 整理活动事实</a>
+  {% endif %}
+</div>

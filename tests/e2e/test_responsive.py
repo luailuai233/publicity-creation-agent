@@ -16,6 +16,8 @@ def test_actual_pages_keep_cta_visible_no_overflow_and_three_columns(live_server
             project_id = page.url.split("/project/")[1].split("/")[0]
             page.goto(f"{base_url}/project/{project_id}/agent")
             assert page.locator("[data-agent-start] .primary-action").is_visible()
+            assert page.get_by_role("navigation", name="项目工作流").is_visible()
+            assert page.get_by_role("link", name="编辑提案").is_visible()
             assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
             page.goto(f"{base_url}/project/{project_id}/inspiration")
             assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")

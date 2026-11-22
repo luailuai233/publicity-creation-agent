@@ -7,6 +7,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from workbench.db.models import Draft, FactCard, Material, QualityIssue, ReferenceCase, SourceChunk, Strategy
+from workbench.facts.schemas import ConflictGroupDetail
+from workbench.facts.service import load_conflict_details
 
 
 class FactEvidence(BaseModel):
@@ -29,10 +31,12 @@ class ProjectSnapshot(BaseModel):
     eligible_fact_ids: list[str] = Field(default_factory=list)
     eligible_fact_types: list[str] = Field(default_factory=list)
     conflict_groups: list[str] = Field(default_factory=list)
+    conflict_details: list[ConflictGroupDetail] = Field(default_factory=list)
     pending_fact_count: int = 0
     selected_reference_count: int = 0
     unanalyzed_reference_ids: list[str] = Field(default_factory=list)
     usable_reference_count: int = 0
+    usable_method_count: int = 0
     allow_without_references: bool = False
     strategy_count: int = 0
     selected_strategy_id: Optional[str] = None
@@ -79,10 +83,12 @@ def build_project_snapshot(session: Session, project_id: str) -> ProjectSnapshot
         eligible_fact_ids=[fact.id for fact in eligible],
         eligible_fact_types=[fact.type for fact in eligible],
         conflict_groups=sorted({fact.conflict_group for fact in facts if fact.conflict_group}),
+        conflict_details=load_conflict_details(session, project_id),
         pending_fact_count=sum(fact.status == "PENDING" for fact in facts),
         selected_reference_count=len(references),
         unanalyzed_reference_ids=[reference.id for reference in references if reference.analysis is None and reference.status == "PENDING"],
         usable_reference_count=sum(reference.analysis is not None for reference in references),
+        usable_method_count=sum(bool(reference.analysis and reference.analysis.transferable) for reference in references),
         allow_without_references=bool(decisions.get("allow_without_references")),
         strategy_count=len(strategies),
         selected_strategy_id=next((strategy.id for strategy in strategies if strategy.selected), None),

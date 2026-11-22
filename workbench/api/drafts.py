@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from workbench.api.responses import api_error, api_response
-from workbench.drafts.schemas import DraftPatch
-from workbench.drafts.service import DraftNeedsReview, create_outline, generate_draft, save_draft
+from workbench.drafts.schemas import DraftPatch, ParagraphRewriteRequest
+from workbench.drafts.service import DraftNeedsReview, create_outline, generate_draft, rewrite_paragraph, save_draft, undo_last_rewrite
 from workbench.web.dependencies import get_session
 
 
@@ -24,6 +24,8 @@ def serialize(draft) -> dict:
         "updated_at": draft.updated_at.strftime("%H:%M:%S"),
         "word_count": len("".join(draft.content.split())),
         "citation_count": len(draft.citations),
+        "revision": draft.revision, "locked_fact_ids": draft.locked_fact_ids,
+        "locked_block_ids": draft.locked_block_ids, "can_undo": bool(draft.undo_snapshot),
     }
 
 
@@ -50,3 +52,24 @@ def update(draft_id: str, patch: DraftPatch, session: Session = Depends(get_sess
         return api_response(serialize(save_draft(session, draft_id, patch)))
     except LookupError:
         return api_error("DRAFT_NOT_FOUND", "没有找到这个稿件", 404)
+
+
+@router.post("/api/drafts/{draft_id}/rewrite")
+def rewrite(draft_id: str, data: ParagraphRewriteRequest, request: Request, session: Session = Depends(get_session)):
+    try:
+        draft = rewrite_paragraph(session, request.app.state.ai_provider, draft_id, data.block_id, data.goal, data.expected_revision)
+        return api_response(serialize(draft))
+    except LookupError:
+        return api_error("DRAFT_NOT_FOUND", "没有找到这个稿件", 404)
+    except DraftNeedsReview as error:
+        return api_error("DRAFT_NEEDS_REVIEW", str(error), 409)
+
+
+@router.post("/api/drafts/{draft_id}/undo")
+def undo(draft_id: str, session: Session = Depends(get_session)):
+    try:
+        return api_response(serialize(undo_last_rewrite(session, draft_id)))
+    except LookupError:
+        return api_error("DRAFT_NOT_FOUND", "没有找到这个稿件", 404)
+    except DraftNeedsReview as error:
+        return api_error("DRAFT_NEEDS_REVIEW", str(error), 409)

@@ -21,13 +21,19 @@ def test_homepage_has_fixed_retro_shell_and_one_primary_action(tmp_path: Path) -
     assert page.status_code == 200
     assert page.text.count('class="primary-action') == 1
     assert 'class="system-topbar"' in page.text
-    assert 'class="desktop-dock"' in page.text
+    assert 'class="desktop-dock"' not in page.text
     assert 'class="bottom-taskbar"' in page.text
     assert "--topbar-height: 52px" in css.text
-    assert "--dock-width: 116px" in css.text
+    assert "LOCAL · MOCK AI" not in page.text
+    assert "本地优先 · 自动保存" not in page.text
+    assert "自动保存已开启" not in page.text
+    assert "结构化模拟模式" not in page.text
+    assert "无外部 API" not in page.text
     assert "--taskbar-height: 44px" in css.text
     assert ":focus-visible" in css.text
     assert "prefers-reduced-motion" in css.text
+    assert "desktop-width-notice" in page.text
+    assert "@media (max-width: 1099px)" in css.text
 
 
 def test_recent_project_has_explicit_delete_confirmation(tmp_path: Path) -> None:

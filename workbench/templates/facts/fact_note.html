@@ -1,5 +1,5 @@
 <article class="fact-note {{ fact.status|lower }}">
-  <span class="fact-type">{{ fact.type }}</span>
+  <span class="fact-type">{{ '引语候选' if fact.type == 'QUOTE' else fact.type }}</span>
   <p>{{ fact.content }}</p>
-  <footer><span>{{ fact.status }}</span><button class="text-button" data-source-fact="{{ fact.id }}" type="button">查看来源</button></footer>
+  <footer><span>{{ fact.status }}</span><button class="text-button" data-source-fact="{{ fact.id }}" type="button">查看来源</button>{% if fact.status == 'PENDING' %}<button class="system-button secondary-action" data-update-fact="{{ fact.id }}" data-fact-status="CONFIRMED" type="button">采用</button><button class="text-button" data-update-fact="{{ fact.id }}" data-fact-status="INVALID" type="button">忽略</button>{% endif %}</footer>
 </article>

@@ -10,9 +10,24 @@ from workbench.ai.faults import FaultInjector
 from workbench.ai.mock_provider import MockAIProvider
 from workbench.ai.schemas.quality import QualityResult, QualitySuggestion
 from workbench.db.base import Base
-from workbench.db.models import AgentRun, AgentStep, Draft, Strategy
+from workbench.db.models import AgentRun, AgentStep, Draft, Project, Strategy
 from workbench.db.session import create_session_factory, create_sqlite_engine
+from workbench.strategies.service import select_strategy
 from tests.integration.agent.test_tools import seed_ready_project
+
+
+def select_recommended_strategy_and_continue(factory, runner: AgentRunner, run_id: str, project_id: str) -> None:
+    with factory() as session:
+        run = session.get(AgentRun, run_id)
+        project = session.get(Project, project_id)
+        assert run.status == "WAITING_USER"
+        assert run.waiting_reason == "STRATEGY_SELECTION"
+        select_strategy(session, project.decisions["recommended_strategy_id"], {})
+        run.status = "QUEUED"
+        run.waiting_reason = None
+        run.waiting_payload = None
+        session.commit()
+    runner.run(run_id)
 
 
 def test_one_start_runs_reference_strategy_content_and_quality_to_completion(tmp_path: Path) -> None:
@@ -25,7 +40,9 @@ def test_one_start_runs_reference_strategy_content_and_quality_to_completion(tmp
         run = create_run(session, project.id, project.goal)
         run_id = run.id
 
-    AgentRunner(factory, build_default_registry(), provider=provider).run(run_id)
+    runner = AgentRunner(factory, build_default_registry(), provider=provider)
+    runner.run(run_id)
+    select_recommended_strategy_and_continue(factory, runner, run_id, project.id)
 
     with factory() as session:
         run = session.get(AgentRun, run_id)
@@ -70,7 +87,9 @@ def test_agent_auto_revises_at_most_once_then_completes(tmp_path: Path) -> None:
         run = create_run(session, project.id, project.goal)
         run_id = run.id
 
-    AgentRunner(factory, build_default_registry(), provider=provider).run(run_id)
+    runner = AgentRunner(factory, build_default_registry(), provider=provider)
+    runner.run(run_id)
+    select_recommended_strategy_and_continue(factory, runner, run_id, project.id)
 
     with factory() as session:
         run = session.get(AgentRun, run_id)

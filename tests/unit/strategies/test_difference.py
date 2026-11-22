@@ -33,4 +33,4 @@ def test_homogeneous_strategies_report_each_broken_dimension() -> None:
     result = validate_strategy_set([duplicated, duplicated, duplicated])
 
     assert result.valid is False
-    assert set(result.errors) == {"叙事视角不足 2 种", "开头方式不足 2 种", "文章结构不足 2 种", "事实集合不能完全相同"}
+    assert set(result.errors) == {"叙事主角、开头方式和文章结构至少需要两个维度存在实质差异", "事实集合不能完全相同"}

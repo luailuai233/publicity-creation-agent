@@ -5,6 +5,7 @@ from workbench.ai.provider import AIProvider
 from workbench.db.models import Draft, Project, ReferenceAnalysis, ReferenceCase, Strategy
 from workbench.facts.eligibility import get_eligible_facts
 from workbench.strategies.difference import validate_strategy_set
+from workbench.agent.planner import has_minimum_fact_set
 
 
 class StrategyNeedsReview(RuntimeError):
@@ -13,14 +14,16 @@ class StrategyNeedsReview(RuntimeError):
 
 def generate_strategies(session: Session, provider: AIProvider, project_id: str) -> list[Strategy]:
     facts = get_eligible_facts(session, project_id)
-    if len(facts) < 3:
-        raise StrategyNeedsReview("至少确认 3 条事实后才能生成策略")
+    if not has_minimum_fact_set([fact.type for fact in facts]):
+        raise StrategyNeedsReview("至少需要一条活动事实和一条具体细节事实")
     transferable = session.scalars(
         select(ReferenceAnalysis.transferable)
         .join(ReferenceCase, ReferenceCase.id == ReferenceAnalysis.reference_id)
         .where(ReferenceCase.project_id == project_id, ReferenceCase.selected.is_(True))
     ).all()
     method_summaries = [item for group in transferable for item in (group or [])]
+    if not method_summaries:
+        raise StrategyNeedsReview("至少需要一个有效参考案例和方法卡")
     project = session.get(Project, project_id)
     project_brief = f"{project.name}｜目标：{project.goal}｜受众：{project.audience}｜语气：{project.tone}｜篇幅：{project.length_min}-{project.length_max}字"
     envelope = provider.generate_strategies(
@@ -31,6 +34,12 @@ def generate_strategies(session: Session, provider: AIProvider, project_id: str)
     difference = validate_strategy_set(envelope.result.strategies)
     if not difference.valid:
         raise StrategyNeedsReview("；".join(difference.errors))
+    eligible_ids = {fact.id for fact in facts}
+    for item in envelope.result.strategies:
+        if set(item.fact_ids) - eligible_ids:
+            raise StrategyNeedsReview("策略引用了当前项目之外或未确认的事实")
+        if not any(method in item.method_summary for method in method_summaries):
+            raise StrategyNeedsReview("策略方法来源不属于当前已选案例")
     used_ids = list(session.scalars(select(Draft.strategy_id).where(Draft.project_id == project_id)).all())
     session.execute(update(Strategy).where(Strategy.project_id == project_id).values(selected=False))
     removable = delete(Strategy).where(Strategy.project_id == project_id)
@@ -39,7 +48,7 @@ def generate_strategies(session: Session, provider: AIProvider, project_id: str)
     session.execute(removable)
     persisted = []
     for index, item in enumerate(envelope.result.strategies):
-        strategy = Strategy(project_id=project_id, **item.model_dump(), selected=index == envelope.result.recommended_index, is_demo=True)
+        strategy = Strategy(project_id=project_id, **item.model_dump(), selected=False, is_demo=envelope.is_demo)
         session.add(strategy)
         persisted.append(strategy)
     session.flush()

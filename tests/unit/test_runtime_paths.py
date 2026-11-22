@@ -1,4 +1,6 @@
 from pathlib import Path
+import sys
+import tomllib
 
 from workbench.runtime_paths import get_runtime_paths
 
@@ -18,3 +20,19 @@ def test_all_writable_paths_stay_inside_project_root() -> None:
     for writable_path in paths.writable_paths():
         assert writable_path.is_absolute()
         assert writable_path == project_root or project_root in writable_path.parents
+
+
+def test_project_requires_supported_python_and_wrapper_uses_project_venv() -> None:
+    project_root = Path(__file__).resolve().parents[2]
+    metadata = tomllib.loads((project_root / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert metadata["project"]["requires-python"] == ">=3.11,<3.13"
+    assert (3, 11) <= sys.version_info[:2] < (3, 13)
+    assert project_root.resolve() in Path(sys.executable).resolve().parents
+
+    runtime_script = (project_root / "scripts" / "runtime-env.ps1").read_text(encoding="utf-8")
+    test_script = (project_root / "scripts" / "test.ps1").read_text(encoding="utf-8")
+    assert "(3, 11) <= sys.version_info[:2] < (3, 13)" in runtime_script
+    assert "Assert-WorkbenchVenv" in runtime_script
+    assert "[Guid]::NewGuid()" in test_script
+    assert "--basetemp" in test_script

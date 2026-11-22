@@ -1,6 +1,12 @@
 <section class="conflict-panel">
   <h2>解决冲突</h2>
-  {% if conflicts %}
-    {% for group, items in conflicts.items() %}<p><strong>{{ group }}</strong> · {{ items|length }} 个待选择值</p>{% endfor %}
+  {% if conflict_details %}
+    {% for group in conflict_details %}
+    <article class="conflict-detail">
+      <h3>{{ {'NUMBER': '人数信息', 'TIME': '时间信息', 'LOCATION': '地点信息', 'QUOTE': '引语内容'}.get(group.fact_type, '事实内容') }}存在冲突</h3>
+      <p>以下内容不能直接同时作为同一项事实使用，请查看原文后选择正确项：</p>
+      <ul>{% for option in group.options %}<li><strong>{{ option.content }}</strong>{% for source in option.sources %}<small>来源：{{ source.label }}：{{ source.excerpt }}</small>{% endfor %}<button class="system-button secondary-action" type="button" data-resolve-conflict="{{ group.id }}" data-fact-id="{{ option.id }}">选择此项</button></li>{% endfor %}</ul>
+    </article>
+    {% endfor %}
   {% else %}<p>当前没有未解决冲突。</p>{% endif %}
 </section>

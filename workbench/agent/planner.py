@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
-from workbench.agent.schemas import AgentQuestion
+from workbench.agent.schemas import AgentQuestion, AgentQuestionGroup, AgentQuestionOption
 from workbench.agent.snapshot import FactEvidence, ProjectSnapshot
 
 
@@ -21,11 +21,13 @@ class AgentDecision(BaseModel):
     tool_name: Optional[str] = None
     reason_summary: str
     expected_artifacts: list[str] = Field(default_factory=list)
-    question: Optional[AgentQuestion] = None
+    question: Optional[AgentQuestionGroup] = None
 
 
 def is_auto_confirmable(fact: FactEvidence, confidence_threshold: float = 0.7) -> bool:
     if fact.source_count < 1 or fact.conflict_group or fact.identity_inferred or fact.confidence < confidence_threshold:
+        return False
+    if fact.type in {"PERSON", "ROLE"} or "PHOTO" in fact.source_categories:
         return False
     if fact.type == "QUOTE" and not {"INTERVIEW", "SPEECH"}.intersection(fact.source_categories):
         return False
@@ -33,15 +35,63 @@ def is_auto_confirmable(fact: FactEvidence, confidence_threshold: float = 0.7) -
 
 
 def has_minimum_fact_set(fact_types: list[str]) -> bool:
-    return len(fact_types) >= 4 and any(fact_type in {"TIME", "LOCATION"} for fact_type in fact_types)
+    activity_types = {"EVENT", "ACTIVITY", "STEP", "FLOW"}
+    detail_types = {"PERSON", "LOCATION", "OPINION", "QUOTE", "NUMBER", "RESULT"}
+    return any(item in activity_types for item in fact_types) and any(item in detail_types for item in fact_types)
 
 
 def _question(code: str, prompt: str) -> AgentDecision:
+    item = AgentQuestion(code=code, prompt=prompt, reason=prompt, allow_free_text=True)
     return AgentDecision(
         action=AgentAction.ASK_USER,
         reason_summary=prompt,
-        question=AgentQuestion(code=code, prompt=prompt, allow_free_text=True),
+        question=AgentQuestionGroup(questions=[item]),
     )
+
+
+def _blocking_questions(snapshot: ProjectSnapshot) -> list[AgentQuestion]:
+    type_labels = {"NUMBER": "人数信息", "TIME": "时间信息", "LOCATION": "地点信息", "QUOTE": "引语内容"}
+    details = {item.id: item for item in snapshot.conflict_details}
+    questions = []
+    for group_id in sorted(snapshot.conflict_groups):
+        detail = details.get(group_id)
+        if detail is None:
+            questions.append(
+                AgentQuestion(
+                    id=f"fact-conflict:{group_id}",
+                    code="FACT_CONFLICT",
+                    prompt="关键事实存在冲突，请前往事实确认页查看候选值",
+                    reason="不同材料对同一事实给出了不一致的信息",
+                    affected_fact_ids=[group_id],
+                    answer_type="SINGLE_CHOICE",
+                )
+            )
+            continue
+        questions.append(
+            AgentQuestion(
+                id=f"fact-conflict:{group_id}",
+                code="FACT_CONFLICT",
+                prompt=f"{type_labels.get(detail.fact_type, '事实内容')}存在冲突，请选择正确的一项",
+                reason="不同材料给出了不一致的信息；选择后，未选项会标记为无效。",
+                affected_fact_ids=[option.id for option in detail.options],
+                answer_type="SINGLE_CHOICE",
+                options=[
+                    AgentQuestionOption(
+                        id=option.id,
+                        label=option.content,
+                        evidence=[f"{source.label}：{source.excerpt}" for source in option.sources],
+                    )
+                    for option in detail.options
+                ],
+            )
+        )
+    if not has_minimum_fact_set(snapshot.eligible_fact_types):
+        questions.append(AgentQuestion(id="missing-facts", code="MISSING_FACTS", prompt="请补充活动事实和至少一条具体细节", reason="策略生成的最低事实集合不足"))
+    if snapshot.usable_reference_count == 0:
+        questions.append(AgentQuestion(id="missing-reference", code="MISSING_REFERENCE", prompt="请提供一个可分析的参考案例", reason="缺少有效参考案例"))
+    if snapshot.usable_method_count == 0:
+        questions.append(AgentQuestion(id="missing-method", code="MISSING_METHOD", prompt="请补充或修订案例方法卡", reason="缺少有效方法卡"))
+    return questions
 
 
 def decide_next(snapshot: ProjectSnapshot, run: Any) -> AgentDecision:
@@ -61,10 +111,6 @@ def decide_next(snapshot: ProjectSnapshot, run: Any) -> AgentDecision:
             reason_summary="活动资料尚未形成事实卡",
             expected_artifacts=["fact_cards"],
         )
-    if snapshot.conflict_groups:
-        return _question("FACT_CONFLICT", "关键事实存在冲突，请确认后继续")
-    if not has_minimum_fact_set(snapshot.eligible_fact_types):
-        return _question("MISSING_FACTS", "已确认且有来源的活动事实不足，请确认候选事实或补充资料")
     if snapshot.unanalyzed_reference_ids:
         return AgentDecision(
             action=AgentAction.CALL_TOOL,
@@ -72,15 +118,22 @@ def decide_next(snapshot: ProjectSnapshot, run: Any) -> AgentDecision:
             reason_summary="存在尚未分析的参考案例",
             expected_artifacts=["reference_analyses"],
         )
-    if snapshot.usable_reference_count == 0 and not snapshot.allow_without_references:
-        return _question("MISSING_REFERENCE", "没有可用参考案例，是否允许按通用写作原则继续？")
-    if snapshot.strategy_count != 3 or snapshot.selected_strategy_id is None:
+    blockers = _blocking_questions(snapshot)
+    if blockers:
+        return AgentDecision(
+            action=AgentAction.ASK_USER,
+            reason_summary=f"发现 {len(blockers)} 个需要一次确认的阻塞问题",
+            question=AgentQuestionGroup(questions=blockers),
+        )
+    if snapshot.strategy_count != 3:
         return AgentDecision(
             action=AgentAction.CALL_TOOL,
             tool_name="plan_strategies",
-            reason_summary="需要生成并自动采用推荐创作策略",
+            reason_summary="需要生成三个创作策略",
             expected_artifacts=["strategies", "recommended_strategy"],
         )
+    if snapshot.selected_strategy_id is None:
+        return _question("STRATEGY_SELECTION", "请选择一个创作策略后继续生成正文")
     if snapshot.draft_id is None or snapshot.draft_is_stale:
         return AgentDecision(
             action=AgentAction.CALL_TOOL,

@@ -1,15 +1,17 @@
 <!doctype html>
+{% set static_version = '20261122-7' %}
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}热点驱动宣传创作工作台{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}?v={{ static_version }}">
     {% block head_extra %}{% endblock %}
-    <script defer src="{{ url_for('static', path='vendor/htmx.min.js') }}"></script>
-    <script defer src="{{ url_for('static', path='js/app.js') }}"></script>
+    <script defer src="{{ url_for('static', path='vendor/htmx.min.js') }}?v={{ static_version }}"></script>
+    <script defer src="{{ url_for('static', path='js/app.js') }}?v={{ static_version }}"></script>
   </head>
   <body>
+    <div class="desktop-width-notice" role="status">请使用宽度至少 1100 像素的桌面窗口体验完整工作台。</div>
     {% block body %}{% endblock %}
   </body>
 </html>

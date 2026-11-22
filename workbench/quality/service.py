@@ -40,10 +40,11 @@ def run_quality_check(session: Session, provider: AIProvider, draft_id: str) -> 
         session.commit()
         raise QualityCheckIncomplete("检查未完成，请重试后再导出")
     for suggestion in envelope.result.issues:
-        issue = QualityIssue(draft_id=draft_id, **suggestion.model_dump(exclude={"auto_fixable"}), status="OPEN")
+        policy = "HARD" if suggestion.type in {"PRIVACY_RISK", "FACT_CONFLICT"} else "SOFT"
+        issue = QualityIssue(draft_id=draft_id, **suggestion.model_dump(exclude={"auto_fixable"}), status="OPEN", resolution_policy=policy, suggestion="请按提示修改后重新检查" if policy == "HARD" else "可修改或说明接受理由")
         session.add(issue)
         issues.append(issue)
     draft.status = "CHECKED"
-    draft.quality_status = "BLOCKED" if any(issue.type in {"MISSING_SOURCE", "FACT_CONFLICT"} and issue.status == "OPEN" for issue in issues) else "PASSED"
+    draft.quality_status = "BLOCKED" if any(issue.resolution_policy == "HARD" and issue.status == "OPEN" for issue in issues) else "PASSED"
     session.commit()
     return issues

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from workbench.agent.schemas import AgentAnswer, AgentMessageCreate, AgentQuestion, AgentRunRead
+from workbench.agent.schemas import AgentAnswer, AgentMessageCreate, AgentQuestion, AgentQuestionGroup, AgentRunRead
 from workbench.domain.enums import AgentMessageType, AgentRunStatus, AgentStepStatus
 
 
@@ -50,4 +50,18 @@ def test_agent_question_and_answer_are_structured() -> None:
 def test_hidden_reasoning_message_type_is_rejected() -> None:
     with pytest.raises(ValidationError):
         AgentMessageCreate(type="CHAIN_OF_THOUGHT", content="hidden reasoning")
+
+
+def test_question_group_requires_at_least_one_structured_question() -> None:
+    question = AgentQuestion(
+        id="fact-conflict:g1",
+        code="FACT_CONFLICT",
+        prompt="请选择有效时间",
+        reason="两个来源中的时间不一致",
+        affected_fact_ids=["f1", "f2"],
+        answer_type="SINGLE_CHOICE",
+    )
+    assert AgentQuestionGroup(questions=[question]).questions[0].id == "fact-conflict:g1"
+    with pytest.raises(ValidationError):
+        AgentQuestionGroup(questions=[])
 

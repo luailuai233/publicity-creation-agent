@@ -1,13 +1,13 @@
-from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Request, UploadFile
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from workbench.api.responses import api_error, api_response
-from workbench.db.models import Job, Material
+from workbench.db.models import Material
 from workbench.db.projects import ProjectNotFoundError, get_project, touch_project_inputs
 from workbench.jobs.models import JobCreate, JobRead
 from workbench.jobs.repository import enqueue_job
@@ -57,10 +57,12 @@ async def create(
         try:
             payload = await upload.read()
             material, job = create_file_material(session, storage, project_id, upload.filename or "material", upload.content_type or "application/octet-stream", payload)
-            background_tasks.add_task(run_material_job, request.app.state.session_factory, job.id)
+            background_tasks.add_task(run_material_job, request.app.state.session_factory, job.id, request.app.state.ai_provider)
             results.append({"material": serialize_material(material), "job": JobRead.model_validate(job).model_dump(mode="json")})
         except MaterialValidationError as error:
             results.append({"file_name": upload.filename or "material", "error": {"code": error.code, "message": error.message}})
+    if "text/html" in request.headers.get("accept", ""):
+        return RedirectResponse(url=f"/project/{project_id}/materials", status_code=303)
     return api_response(results, status_code=201)
 
 
@@ -85,7 +87,7 @@ def retry(material_id: str, request: Request, background_tasks: BackgroundTasks,
     material.parse_status = "QUEUED"
     session.commit()
     job = enqueue_job(session, JobCreate(project_id=material.project_id, material_id=material.id, type="PARSE_MATERIAL"))
-    background_tasks.add_task(run_material_job, request.app.state.session_factory, job.id)
+    background_tasks.add_task(run_material_job, request.app.state.session_factory, job.id, request.app.state.ai_provider)
     return api_response(JobRead.model_validate(job).model_dump(mode="json"), status_code=202)
 
 

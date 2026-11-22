@@ -8,7 +8,7 @@ from workbench.ai.envelope import AIEnvelope
 from workbench.ai.faults import FaultInjector
 from workbench.ai.schemas.reference import ReferenceAnalysisResult
 from workbench.ai.schemas.strategy import StrategySetResult
-from workbench.ai.schemas.draft import DraftResult, OutlineResult
+from workbench.ai.schemas.draft import DraftResult, OutlineResult, ParagraphRewriteResult
 from workbench.ai.schemas.quality import QualityResult
 
 
@@ -73,6 +73,7 @@ class MockAIProvider:
         fact_ids = [fact["id"] for fact in facts]
         fact_sets = [fact_ids[:3], fact_ids[::2] or fact_ids[:1], fact_ids[1:4] or fact_ids[-1:]]
         names = ["人物故事型", "反差成长型", "现场纪实型"]
+        protagonists = ["核心参与者", "发生变化的志愿者", "活动现场群像"]
         openings = ["从一个人物动作切入", "先呈现结果与起点的反差", "从现场声音和时间切片切入"]
         structures = ["人物细节—行动—变化—价值回扣", "结果反差—过程追溯—关键选择—余韵", "时间线—多人物切面—共同主题"]
         warnings = []
@@ -84,6 +85,7 @@ class MockAIProvider:
                 "strategies": [
                     {
                         "name": names[index],
+                        "protagonist": protagonists[index],
                         "angle": f"围绕{names[index].replace('型', '')}组织已确认事实，服务于{project_name}",
                         "opening": openings[index],
                         "structure": structures[index],
@@ -147,7 +149,7 @@ class MockAIProvider:
         name = strategy["name"]
         payload = {
             "titles": [
-                f"在现场，看见每一次认真发生",
+                "在现场，看见每一次认真发生",
                 f"从一个动作开始：{name.replace('型', '')}里的真实变化",
                 "这一天，我们把答案写在行动里",
                 "不只是一场活动：那些被看见的细节",
@@ -172,3 +174,8 @@ class MockAIProvider:
     def check_quality(self, content: str, facts: list[dict], method_summaries: list[str]) -> AIEnvelope[QualityResult]:
         payload = {"issues": []}
         return self._validated_envelope("quality", QualityResult, payload, [fact["id"] for fact in facts])
+
+    def rewrite_paragraph(self, paragraph: str, goal: str, facts: list[dict], locked_fact_ids: list[str]) -> AIEnvelope[ParagraphRewriteResult]:
+        fact_ids = [fact["id"] for fact in facts]
+        payload = {"content": f"{paragraph.strip()}\n\n改写目标：{goal}", "cited_fact_ids": fact_ids}
+        return self._validated_envelope("rewrite", ParagraphRewriteResult, payload, fact_ids)

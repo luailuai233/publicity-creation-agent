@@ -1,6 +1,5 @@
 from io import BytesIO
 from pathlib import Path
-from typing import BinaryIO
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session

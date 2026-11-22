@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 
 from workbench.db.models import Draft, QualityIssue
 from workbench.db.projects import get_project
+from workbench.exports.markdown import export_block_reason
 from workbench.exports.plain_text import markdown_to_plain_text
 from workbench.web.dependencies import get_session
+from workbench.web.project_navigation import build_project_navigation
 
 
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parents[1] / "templates"))
@@ -21,7 +23,8 @@ def page(project_id: str, request: Request, session: Session = Depends(get_sessi
     project = get_project(session, project_id)
     draft = session.scalar(select(Draft).where(Draft.project_id == project_id, Draft.is_current.is_(True)))
     issues = [] if draft is None else list(session.scalars(select(QualityIssue).where(QualityIssue.draft_id == draft.id)).all())
+    export_blocker = export_block_reason(draft, issues)
     return templates.TemplateResponse(
         request=request, name="quality/page.html",
-        context={"project": project, "draft": draft, "issues": issues, "plain_text": markdown_to_plain_text(draft.content) if draft else ""},
+        context={"project": project, "draft": draft, "issues": issues, "plain_text": markdown_to_plain_text(draft.content) if draft else "", "export_blocker": export_blocker, "navigation": build_project_navigation(session, project_id, request.url.path)},
     )

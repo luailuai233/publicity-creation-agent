@@ -21,6 +21,7 @@ def snapshot(**changes) -> ProjectSnapshot:
         "selected_reference_count": 1,
         "unanalyzed_reference_ids": [],
         "usable_reference_count": 1,
+        "usable_method_count": 1,
         "allow_without_references": False,
         "strategy_count": 3,
         "selected_strategy_id": "strategy-1",
@@ -42,12 +43,6 @@ def snapshot(**changes) -> ProjectSnapshot:
         ({"fact_count": 0, "eligible_fact_ids": [], "eligible_fact_types": []}, "CALL_TOOL", "validate_facts", None),
         ({"conflict_groups": ["time-conflict"]}, "ASK_USER", None, "FACT_CONFLICT"),
         ({"selected_reference_count": 0, "usable_reference_count": 0}, "ASK_USER", None, "MISSING_REFERENCE"),
-        (
-            {"selected_reference_count": 0, "usable_reference_count": 0, "allow_without_references": True, "strategy_count": 0, "selected_strategy_id": None},
-            "CALL_TOOL",
-            "plan_strategies",
-            None,
-        ),
         ({"unanalyzed_reference_ids": ["reference-1"]}, "CALL_TOOL", "analyze_references", None),
         ({"strategy_count": 0, "selected_strategy_id": None}, "CALL_TOOL", "plan_strategies", None),
         ({"draft_id": None, "quality_status": "NOT_CHECKED"}, "CALL_TOOL", "generate_content", None),
@@ -96,6 +91,8 @@ def test_sourced_unconflicted_high_confidence_fact_can_be_auto_confirmed() -> No
         FactEvidence(id="no-source", type="EVENT", confidence=0.9, source_count=0),
         FactEvidence(id="conflict", type="TIME", confidence=0.9, source_count=1, conflict_group="group-1"),
         FactEvidence(id="identity", type="PERSON", confidence=0.9, source_count=1, identity_inferred=True),
+        FactEvidence(id="person", type="PERSON", confidence=0.9, source_count=1),
+        FactEvidence(id="photo", type="EVENT", confidence=0.9, source_count=1, source_categories=["PHOTO"]),
         FactEvidence(id="low", type="EVENT", confidence=0.69, source_count=1),
         FactEvidence(id="quote", type="QUOTE", confidence=0.9, source_count=1, source_categories=["FLOW"]),
     ],
@@ -104,8 +101,76 @@ def test_unsafe_fact_cannot_be_auto_confirmed(fact: FactEvidence) -> None:
     assert is_auto_confirmable(fact) is False
 
 
-def test_minimum_fact_set_requires_time_or_scene_and_three_other_facts() -> None:
-    assert has_minimum_fact_set(["TIME", "EVENT", "EVENT", "LOCATION"]) is True
-    assert has_minimum_fact_set(["EVENT", "EVENT", "PERSON", "NUMBER"]) is False
-    assert has_minimum_fact_set(["TIME", "EVENT", "LOCATION"]) is False
+def test_minimum_fact_set_requires_one_activity_and_one_specific_detail() -> None:
+    assert has_minimum_fact_set(["EVENT", "LOCATION"]) is True
+    assert has_minimum_fact_set(["EVENT", "EVENT"]) is False
+    assert has_minimum_fact_set(["LOCATION", "NUMBER"]) is False
+
+
+def test_planner_aggregates_all_known_blockers_in_stable_order() -> None:
+    decision = decide_next(
+        snapshot(
+            eligible_fact_ids=[],
+            eligible_fact_types=[],
+            conflict_groups=["time-2", "time-1"],
+            selected_reference_count=0,
+            usable_reference_count=0,
+            usable_method_count=0,
+            strategy_count=0,
+            selected_strategy_id=None,
+        ),
+        SimpleNamespace(tool_call_count=1, max_tool_calls=12, revision_count=0, max_revisions=1),
+    )
+
+    assert decision.action == AgentAction.ASK_USER
+    assert [item.id for item in decision.question.questions] == [
+        "fact-conflict:time-1",
+        "fact-conflict:time-2",
+        "missing-facts",
+        "missing-reference",
+        "missing-method",
+    ]
+
+
+def test_conflict_question_exposes_candidate_values_and_source_evidence() -> None:
+    decision = decide_next(
+        snapshot(
+            conflict_groups=["number-internal-id"],
+            conflict_details=[
+                {
+                    "id": "number-internal-id",
+                    "fact_type": "NUMBER",
+                    "options": [
+                        {
+                            "id": "fact-36",
+                            "content": "36 人",
+                            "sources": [
+                                {
+                                    "label": "活动流程.docx · 第 4 段",
+                                    "excerpt": "原文：活动共有 36 人参加。",
+                                }
+                            ],
+                        },
+                        {
+                            "id": "fact-12",
+                            "content": "12 人",
+                            "sources": [
+                                {
+                                    "label": "采访记录.docx · 第 7 段",
+                                    "excerpt": "原文：现场共有 12 人参加。",
+                                }
+                            ],
+                        },
+                    ],
+                }
+            ],
+        ),
+        SimpleNamespace(tool_call_count=1, max_tool_calls=12, revision_count=0, max_revisions=1),
+    )
+
+    question = decision.question.questions[0]
+    assert question.prompt == "人数信息存在冲突，请选择正确的一项"
+    assert question.affected_fact_ids == ["fact-36", "fact-12"]
+    assert [option.label for option in question.options] == ["36 人", "12 人"]
+    assert question.options[0].evidence == ["活动流程.docx · 第 4 段：原文：活动共有 36 人参加。"]
 

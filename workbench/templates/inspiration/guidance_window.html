@@ -1,8 +1,8 @@
 <section class="retro-window guidance-window">
   <header class="window-titlebar"><span>迁移备忘录</span><span>SAFE MODE</span></header>
   <div class="window-content guidance-stack">
-    <section class="guidance-group"><h3>✓ 可迁移方法</h3><p>具体细节开场、行动后的价值回扣。</p></section>
-    <section class="guidance-group risk"><h3>× 不可直接照搬</h3><p>原句、人物设定、数字和案例事实。</p></section>
+    <section class="guidance-group"><h3>✓ 可迁移方法</h3>{% if active_analysis %}<ul>{% for item in active_analysis.transferable %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p>完成案例分析后显示。</p>{% endif %}</section>
+    <section class="guidance-group risk"><h3>× 不可直接照搬</h3>{% if active_analysis %}<ul>{% for item in active_analysis.avoid %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p>完成案例分析后显示。</p>{% endif %}</section>
     <section class="guidance-group"><h3>→ 本次适配提醒</h3><p>只使用已确认活动事实，低置信度内容先人工处理。</p></section>
   </div>
 </section>

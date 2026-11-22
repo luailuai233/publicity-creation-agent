@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from workbench.db.base import Base
 from workbench.db.models import FactCard, FactSource, Material, Project, SourceChunk
 from workbench.facts.eligibility import get_eligible_facts
-from workbench.facts.service import FactTransitionError, resolve_conflict, update_fact
+from workbench.facts.service import FactTransitionError, auto_confirm_safe_facts, resolve_conflict, update_fact
 from workbench.facts.schemas import ConflictResolution, FactPatch
 
 
@@ -52,6 +52,31 @@ def test_quote_requires_interview_or_speech_source(tmp_path: Path) -> None:
         update_fact(session, quote.id, FactPatch(status="CONFIRMED"))
 
 
+def test_quote_accepts_an_interview_filename_when_legacy_category_is_other(tmp_path: Path) -> None:
+    session = build_session(tmp_path)
+    project = Project(name="采访来源")
+    session.add(project)
+    session.flush()
+    material = Material(
+        project_id=project.id,
+        file_name="02_采访记录.docx",
+        mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        category="OTHER",
+    )
+    session.add(material)
+    session.flush()
+    chunk = SourceChunk(material_id=material.id, content="受访者表示：“正式地点尚未公布”。", paragraph=8)
+    quote = FactCard(project_id=project.id, type="QUOTE", content="正式地点尚未公布", status="PENDING", confidence=0.9)
+    session.add_all([chunk, quote])
+    session.flush()
+    session.add(FactSource(fact_id=quote.id, source_chunk_id=chunk.id))
+    session.commit()
+
+    confirmed = update_fact(session, quote.id, FactPatch(status="CONFIRMED"))
+
+    assert confirmed.status == "CONFIRMED"
+
+
 def test_conflicts_are_ineligible_until_manually_resolved(tmp_path: Path) -> None:
     session = build_session(tmp_path)
     project, first = add_fact_with_source(session, status="CONFLICT", content="活动时间为 9:00")
@@ -70,3 +95,12 @@ def test_conflicts_are_ineligible_until_manually_resolved(tmp_path: Path) -> Non
     assert chosen.status == "CONFIRMED"
     assert [fact.id for fact in eligible] == [first.id]
     assert session.get(FactCard, second.id).status == "INVALID"
+
+
+@pytest.mark.parametrize("fact_type", ["PERSON", "ROLE"])
+def test_identity_fact_types_are_not_auto_confirmed(tmp_path: Path, fact_type: str) -> None:
+    session = build_session(tmp_path)
+    project, fact = add_fact_with_source(session, fact_type=fact_type)
+
+    assert auto_confirm_safe_facts(session, project.id) == []
+    assert fact.status == "PENDING"

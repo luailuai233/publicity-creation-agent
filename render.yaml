@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: publicity-creation-agent
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: WORKBENCH_ROOT
+        value: /tmp/workbench
+      - key: AI_PROVIDER
+        value: mock
+      - key: MOCK_AI_DELAY_MS
+        value: "0"
+      - key: MAX_REQUEST_BODY_BYTES
+        value: "26214400"

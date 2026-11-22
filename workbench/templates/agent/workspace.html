@@ -1,14 +1,13 @@
 {% extends "base.html" %}
 {% from "components/window.html" import window %}
 {% block title %}宣传创作 Agent · {{ project.name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', path='css/agent.css') }}">{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', path='css/agent.css') }}?v={{ static_version }}">{% endblock %}
 {% block body %}
-<div class="retro-desktop agent-workspace" data-agent-workspace data-project-id="{{ project.id }}" data-run-id="{{ run.id if run else '' }}">
+<div class="retro-desktop has-workflow-navigation agent-workspace" data-agent-workspace data-project-id="{{ project.id }}" data-run-id="{{ run.id if run else '' }}">
   {% include "components/topbar.html" %}
-  {% include "components/dock.html" %}
+  {% include "components/workflow_nav.html" %}
   <main class="desktop-canvas agent-grid">
     {% call window('任务控制台.EXE', 'agent-goal-window') %}
-      <span class="demo-badge">Demo 模拟结果</span>
       <h1>宣传创作 Agent</h1>
       <form data-agent-start>
         <label>创作目标<textarea name="goal" required>{{ project.goal or ('为“' ~ project.name ~ '”生成一篇可溯源的活动长图文') }}</textarea></label>
@@ -30,5 +29,5 @@
   </main>
   <footer class="bottom-taskbar"><span data-agent-footer>{{ project.name }} · {{ run.status if run else 'READY' }}</span><a class="system-button secondary-action" href="/project/{{ project.id }}/materials">查看项目资料</a></footer>
 </div>
-<script defer src="{{ url_for('static', path='js/agent.js') }}"></script>
+<script defer src="{{ url_for('static', path='js/agent.js') }}?v={{ static_version }}"></script>
 {% endblock %}

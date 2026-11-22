@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="retro-desktop has-workflow-navigation">
+  {% include "components/topbar.html" %}{% include "components/workflow_nav.html" %}
+  <main class="desktop-canvas"><section class="retro-window"><header class="window-titlebar"><span>事实确认 · {{ project.name }}</span></header><div class="window-content">
+    {% if prerequisite %}<p class="prerequisite-note">{{ prerequisite }}</p>{% endif %}
+    <div class="facts-header"><h1>活动事实与异常收件箱</h1><span>{{ facts|length }} 条</span></div>
+    <div class="facts-grid">{% for fact in facts %}{% include "facts/fact_note.html" %}{% else %}<p class="empty-state">解析素材后提取待确认事实。</p>{% endfor %}</div>
+    {% include "facts/conflict_resolver.html" %}{% include "facts/timeline.html" %}{% include "facts/source_dialog.html" %}
+  </div></section></main>
+  <footer class="bottom-taskbar"><span data-workflow-status>{{ facts|length }} 条事实</span><a class="system-button secondary-action" href="/project/{{ project.id }}/inspiration">前往灵感收藏</a></footer>
+</div>{% endblock %}

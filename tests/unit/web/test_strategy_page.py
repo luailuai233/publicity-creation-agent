@@ -2,12 +2,10 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from workbench.ai.mock_provider import MockAIProvider
 from workbench.db.base import Base
-from workbench.db.models import FactCard, Project
+from workbench.db.models import Project, Strategy
 from workbench.main import create_app
 from workbench.settings import Settings
-from workbench.strategies.service import generate_strategies
 
 
 def test_strategy_page_renders_three_proposals_and_one_gated_cta(tmp_path: Path) -> None:
@@ -17,11 +15,10 @@ def test_strategy_page_renders_three_proposals_and_one_gated_cta(tmp_path: Path)
         project = Project(name="策略页面")
         session.add(project)
         session.flush()
-        for index in range(4):
-            session.add(FactCard(project_id=project.id, type="EVENT", content=f"确认事实 {index}", status="CONFIRMED"))
+        for index in range(3):
+            session.add(Strategy(project_id=project.id, name=f"提案 {index + 1}", protagonist=f"主角 {index + 1}", angle="现场", opening=f"开头 {index + 1}", structure=f"结构 {index + 1}", fact_ids=[], method_summary="人物视角", risk="注意事实", selected=False))
         session.commit()
         project_id = project.id
-        generate_strategies(session, MockAIProvider(delay_ms=0), project_id)
 
     with TestClient(app) as client:
         page = client.get(f"/project/{project_id}/strategy")

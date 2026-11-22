@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 from typing import Callable, Optional
 
 from sqlalchemy import delete, func, select
@@ -12,6 +13,7 @@ from workbench.agent.snapshot import ProjectSnapshot, build_project_snapshot
 from workbench.agent.tools.base import AgentToolContext
 from workbench.agent.tools.registry import ToolRegistry
 from workbench.db.models import AgentRun, AgentStep, Draft, DraftCitation, Project, QualityIssue
+from workbench.logging import log_event
 
 
 ACTIVE_STATUSES = {"QUEUED", "RUNNING", "PAUSED", "WAITING_USER"}
@@ -105,7 +107,11 @@ class AgentRunner:
                 if decision.action == AgentAction.ASK_USER:
                     run.status = "WAITING_USER"
                     run.waiting_reason = decision.question.code if decision.question else "USER_INPUT_REQUIRED"
-                    run.waiting_payload = decision.question.model_dump(mode="json") if decision.question else None
+                    run.waiting_payload = (
+                        {**decision.question.model_dump(mode="json"), "project_revision": snapshot.project_revision}
+                        if decision.question
+                        else None
+                    )
                     run.current_stage = decision.reason_summary
                     session.commit()
                     return
@@ -181,6 +187,7 @@ class AgentRunner:
                         step.result_ref = result.result_ref
                     step.ended_at = datetime.utcnow()
                     session.commit()
+                    log_event(logging.getLogger("workbench.agent"), "agent_step", project_id=run.project_id, run_id=run.id, step_id=step.id, tool_name=step.tool_name, duration_ms=int((step.ended_at - step.started_at).total_seconds() * 1000), status=step.status, error_code=step.error_code)
                 except Exception as exc:
                     session.rollback()
                     run = self._get_run(session, run_id)
@@ -196,6 +203,7 @@ class AgentRunner:
                     self._finish(run, "FAILED", type(exc).__name__)
                     run.current_stage = "工具执行失败"
                     session.commit()
+                    log_event(logging.getLogger("workbench.agent"), "agent_step", project_id=run.project_id, run_id=run.id, step_id=processing.id if processing else None, tool_name=processing.tool_name if processing else None, status="FAILED", error_code=type(exc).__name__)
                     return
 
         with self.session_factory() as session:

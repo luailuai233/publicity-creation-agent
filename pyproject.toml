@@ -5,11 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "publicity-creation-workbench"
 version = "0.1.0"
-requires-python = ">=3.9"
+requires-python = ">=3.11,<3.13"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers --basetemp=.runtime/pytest-tmp -p no:cacheprovider"
+addopts = "-ra --strict-markers -p no:cacheprovider"
 
 [tool.setuptools.packages.find]
 include = ["workbench*"]
+
+[tool.ruff.lint]
+ignore = ["E702"] # Existing compact fixture setup; production code is still checked for correctness issues.

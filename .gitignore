@@ -1,6 +1,7 @@
 .venv/
 .runtime/
 .superpowers/
+.working/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -8,6 +9,14 @@ storage/*
 !storage/.gitkeep
 exports/*
 !exports/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
 test-results/
+.playwright/
+.coverage
+htmlcov/
 .env
+.env.*
+!.env.example
 *.log

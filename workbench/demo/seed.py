@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import shutil
 
 from sqlalchemy import delete, select
@@ -8,17 +9,17 @@ from workbench.db.models import Draft, DraftCitation, EventLog, FactCard, FactSo
 from workbench.db.projects import create_project
 from workbench.domain.project_schemas import ProjectCreate
 
-DEMO_PROJECT_NAME = "Demo · 秋日公益市集宣传"
-MATERIALS = [
-    ("event_flow.txt", "活动流程", "10 月 18 日 9:00，秋日公益市集在校园中央广场开始。志愿者共 36 人。"),
-    ("interview.txt", "采访", "受访者说，最难忘的是孩子们把旧书认真分类，并写下新的阅读寄语。"),
-    ("speech.txt", "主持稿", "主持稿记录活动于 10 月 18 日 9:30 开始，现场设置旧书交换与公益义卖区域。"),
-]
-REFERENCES = [
-    "从一双沾着颜料的手写起，文章沿人物行动展开，最后回到社区共同参与的价值。",
-    "先呈现义卖前后的反差，再追溯志愿者如何解决现场问题，结尾保持克制。",
-    "以时间线串联三个现场切面，让图片承担证据与节奏，而不是代替事实判断。",
-]
+SAMPLE_PATH = Path(__file__).resolve().parents[2] / "data" / "samples" / "demo.json"
+
+
+def load_demo_dataset() -> dict:
+    return json.loads(SAMPLE_PATH.read_text(encoding="utf-8"))
+
+
+_DATASET = load_demo_dataset()
+DEMO_PROJECT_NAME = _DATASET["project_name"]
+MATERIALS = [(item["file_name"], item["category"], item["content"]) for item in _DATASET["materials"]]
+REFERENCES = list(_DATASET["references"])
 
 
 def ensure_demo_project(session: Session) -> Project:
@@ -59,10 +60,11 @@ def reset_demo_project(session: Session, uploads_root: Path) -> Project:
         FactCard(project_id=project.id, type="NUMBER", content="志愿者共 36 人", status="CONFIRMED", confidence=0.94),
         FactCard(project_id=project.id, type="QUOTE", content="孩子们把旧书认真分类并写下阅读寄语", status="CONFIRMED", confidence=0.91),
         FactCard(project_id=project.id, type="EVENT", content="现场设置旧书交换与公益义卖区域", status="CONFIRMED", confidence=0.90),
+        FactCard(project_id=project.id, type="OPINION", content="现场氛围温暖", status="PENDING", confidence=0.55),
     ]
     for fact in facts:
         session.add(fact); session.flush()
-    for fact, chunk in zip(facts, (chunks[0], chunks[2], chunks[0], chunks[1], chunks[2])):
+    for fact, chunk in zip(facts, (chunks[0], chunks[2], chunks[0], chunks[1], chunks[2], chunks[1])):
         session.add(FactSource(fact_id=fact.id, source_chunk_id=chunk.id))
     for index, raw_text in enumerate(REFERENCES, start=1):
         session.add(ReferenceCase(project_id=project.id, input_type="TEXT", raw_text=raw_text, source_label=f"参考案例 {index}", status="PENDING", selected=True))

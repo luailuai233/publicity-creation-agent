@@ -3,7 +3,6 @@
 {% block body %}
 <div class="retro-desktop">
   {% include "components/topbar.html" %}
-  {% include "components/dock.html" %}
   <main class="desktop-canvas home-grid">
     {% call window('新建任务.EXE', 'create-window') %}
       <p class="eyebrow">NEW EDITORIAL PROJECT</p>
@@ -13,7 +12,7 @@
       {% include "projects/demo_button.html" %}
     {% endcall %}
     {% call window('最近任务.DAT', 'recent-window') %}
-      <div class="window-toolbar"><strong>最近任务</strong><span>自动保存已开启</span></div>
+      <div class="window-toolbar"><strong>最近任务</strong><span>继续上次工作</span></div>
       {% include "projects/recent_projects.html" %}
     {% endcall %}
   </main>

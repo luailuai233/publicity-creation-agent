@@ -51,7 +51,7 @@ def test_default_registry_contains_only_six_whitelisted_tools(tmp_path: Path) ->
     )
 
 
-def test_reference_analysis_isolated_and_strategy_tool_auto_selects_recommendation(tmp_path: Path) -> None:
+def test_reference_analysis_isolated_and_strategy_tool_only_recommends(tmp_path: Path) -> None:
     engine = create_sqlite_engine(tmp_path / "tools.db")
     Base.metadata.create_all(engine)
     factory = create_session_factory(engine)
@@ -67,12 +67,13 @@ def test_reference_analysis_isolated_and_strategy_tool_auto_selects_recommendati
         selected = session.scalar(select(Strategy).where(Strategy.project_id == project.id, Strategy.selected.is_(True)))
         analysis_count = session.scalar(select(func.count()).select_from(ReferenceAnalysis).where(ReferenceAnalysis.reference_id == reference.id))
         session.refresh(project)
+        recommended = session.get(Strategy, project.decisions["recommended_strategy_id"])
 
     assert before_facts == after_facts == 4
     assert analysis_count == 1
-    assert selected is not None
-    assert project.decisions["recommended_strategy_id"] == selected.id
-    assert "参考案例原文不可进入事实库" not in selected.method_summary
+    assert selected is None
+    assert recommended is not None
+    assert "参考案例原文不可进入事实库" not in recommended.method_summary
 
 
 def test_content_tool_uses_recommended_title_and_quality_tool_sets_gate(tmp_path: Path) -> None:
@@ -86,6 +87,9 @@ def test_content_tool_uses_recommended_title_and_quality_tool_sets_gate(tmp_path
         context = AgentToolContext(run_id="run", project_id=project.id, session=session, provider=provider)
         registry.get("analyze_references").execute(context, registry.get("analyze_references").input_model(project_id=project.id))
         registry.get("plan_strategies").execute(context, StrategyToolInput(project_id=project.id))
+        recommended = session.get(Strategy, session.get(Project, project.id).decisions["recommended_strategy_id"])
+        recommended.selected = True
+        session.commit()
         registry.get("generate_content").execute(context, ContentToolInput(project_id=project.id, mode="initial"))
         draft = session.scalar(select(Draft).where(Draft.project_id == project.id, Draft.is_current.is_(True)))
         registry.get("check_quality").execute(context, registry.get("check_quality").input_model(project_id=project.id))

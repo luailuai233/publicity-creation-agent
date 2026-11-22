@@ -1,4 +1,4 @@
 <form data-demo-reset onsubmit="event.preventDefault(); fetch('/api/demo/reset', {method:'POST'}).then(r => r.json()).then(x => { if (x.data) location.href='/project/' + x.data.project_id + '/materials'; });">
-  <button class="pixel-button secondary" type="submit">重置并打开完整 Demo</button>
-  <small>仅重置带 Demo 标记的数据，不影响你的其他项目。</small>
+  <button class="pixel-button secondary" type="submit">载入示例项目</button>
+  <small>载入固定脱敏样例，不影响你的其他项目。</small>
 </form>

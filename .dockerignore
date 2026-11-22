@@ -2,9 +2,15 @@
 .venv
 .runtime
 .superpowers
+.working
 storage
 exports
 test-results
+.playwright
+*.db
+*.sqlite*
+*.log
+.env.*
 __pycache__
 *.pyc
 .env

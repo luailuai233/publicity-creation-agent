@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from workbench.api.responses import api_error, api_response
+from workbench.agent.interrupts import reconcile_resolved_conflict, replan_waiting_run
 from workbench.db.models import FactCard, FactSource, Material, SourceChunk
 from workbench.facts.extractor import extract_fact_candidates
 from workbench.facts.schemas import ConflictResolution, FactPatch
@@ -48,20 +49,48 @@ def extract(project_id: str, session: Session = Depends(get_session)):
 
 
 @router.patch("/api/facts/{fact_id}")
-def update(fact_id: str, patch: FactPatch, session: Session = Depends(get_session)):
+def update(
+    fact_id: str,
+    patch: FactPatch,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+):
     try:
-        return api_response(serialize_fact(session, update_fact(session, fact_id, patch)))
+        fact = update_fact(session, fact_id, patch, commit=False)
+        resumed_run = replan_waiting_run(session, fact.project_id)
+        session.commit()
+        session.refresh(fact)
+        if resumed_run is not None:
+            background_tasks.add_task(request.app.state.agent_runner.run, resumed_run.id)
+        return api_response(serialize_fact(session, fact))
     except FactNotFoundError:
+        session.rollback()
         return api_error("FACT_NOT_FOUND", "没有找到这个事实", 404)
     except FactTransitionError as error:
+        session.rollback()
         return api_error("FACT_TRANSITION_BLOCKED", str(error), 409)
 
 
 @router.post("/api/facts/conflicts/{group_id}/resolve")
-def resolve(group_id: str, resolution: ConflictResolution, session: Session = Depends(get_session)):
+def resolve(
+    group_id: str,
+    resolution: ConflictResolution,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+):
     try:
-        return api_response(serialize_fact(session, resolve_conflict(session, group_id, resolution)))
+        chosen = resolve_conflict(session, group_id, resolution, commit=False)
+        resumed_run = reconcile_resolved_conflict(session, chosen.project_id, group_id)
+        session.commit()
+        session.refresh(chosen)
+        if resumed_run is not None:
+            background_tasks.add_task(request.app.state.agent_runner.run, resumed_run.id)
+        return api_response(serialize_fact(session, chosen))
     except FactNotFoundError:
+        session.rollback()
         return api_error("CONFLICT_NOT_FOUND", "没有找到这个冲突组", 404)
     except FactTransitionError as error:
+        session.rollback()
         return api_error("CONFLICT_RESOLUTION_BLOCKED", str(error), 409)

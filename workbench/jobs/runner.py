@@ -1,12 +1,14 @@
 from datetime import datetime
 
+from sqlalchemy import delete
 from sqlalchemy.orm import sessionmaker
 
 from workbench.db.models import Job, Material, SourceChunk
 from workbench.materials.parsers import parse_path
+from workbench.materials.categories import infer_material_category
 
 
-def run_material_job(session_factory: sessionmaker, job_id: str) -> None:
+def run_material_job(session_factory: sessionmaker, job_id: str, provider=None) -> None:
     with session_factory() as session:
         job = session.get(Job, job_id)
         if job is None or job.material_id is None:
@@ -20,15 +22,25 @@ def run_material_job(session_factory: sessionmaker, job_id: str) -> None:
         session.commit()
 
     try:
-        result = parse_path(material_path(material.path), material.mime_type)
+        result = parse_path(material_path(material.path), material.mime_type, image_provider=provider)
         with session_factory() as session:
             job = session.get(Job, job_id)
             material = session.get(Material, job.material_id)
             material.parsed_text = result.text
             material.summary = result.summary
-            material.category = result.category
+            material.category = infer_material_category(material.file_name, result.category)
             material.parse_status = result.status
-            session.add(SourceChunk(material_id=material.id, content=result.text, paragraph=1))
+            session.execute(delete(SourceChunk).where(SourceChunk.material_id == material.id))
+            for chunk in result.chunks:
+                session.add(
+                    SourceChunk(
+                        material_id=material.id,
+                        content=chunk.content,
+                        page=chunk.page,
+                        paragraph=chunk.paragraph,
+                        bbox={"location": chunk.location} if chunk.location else None,
+                    )
+                )
             job.status = "DONE"
             job.progress = 100
             job.stage = "解析完成"

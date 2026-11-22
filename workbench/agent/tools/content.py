@@ -1,7 +1,6 @@
 from typing import Literal
 
 from pydantic import BaseModel
-from sqlalchemy import select
 
 from workbench.agent.tools.base import AgentToolContext, AgentToolResult
 from workbench.db.models import AgentRun, Project

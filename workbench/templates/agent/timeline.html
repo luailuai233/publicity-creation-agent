@@ -1,6 +1,6 @@
 <section class="retro-window agent-timeline">
   <header class="window-titlebar"><span>工具执行时间线</span><span>{{ steps|length }} STEP(S)</span></header>
   <div class="window-content" data-agent-timeline>
-    {% for step in steps %}<article class="agent-step {{ step.status|lower }}"><strong>{{ step.sequence }} · {{ step.tool_name }}</strong><span>{{ step.status }}</span><p>{{ step.output_summary or step.input_summary }}</p></article>{% else %}<p class="empty-state">启动后会显示工具名称、结果摘要和失败原因；不会展示隐藏推理。</p>{% endfor %}
+    {% for step in steps %}<article class="agent-step {{ step.status|lower }}"><strong>{{ step.sequence }} · {{ step.tool_name }}</strong><span>{{ step.status }}{% if step.error_code %} · {{ step.error_code }}{% endif %}</span><p>{{ step.output_summary or step.input_summary }}</p></article>{% else %}<p class="empty-state">启动后会显示工具名称、结果摘要和失败原因；不会展示隐藏推理。</p>{% endfor %}
   </div>
 </section>

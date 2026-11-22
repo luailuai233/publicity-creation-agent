@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import re
 
+from workbench.quality.similarity import find_similar_fragments
+
 
 @dataclass(frozen=True)
 class IssueCandidate:
@@ -8,6 +10,10 @@ class IssueCandidate:
     severity: str
     block_id: str
     message: str
+    resolution_policy: str = "SOFT"
+    resolution_note: str = ""
+    fragment: str = ""
+    suggestion: str = ""
 
 
 BLOCK_MARKER = re.compile(r"<!--\s*block:([\w-]+)\s*-->")
@@ -45,19 +51,19 @@ def scan_content(content: str, sourced_terms: set[str], conflict_terms: set[str]
             matches = [match.group(0) for match in pattern.finditer(block)]
             unsourced = [value for value in matches if not any(value in source or source in value for source in sourced_terms)]
             if unsourced:
-                issues.append(IssueCandidate("MISSING_SOURCE", "HIGH", block_id, f"{label}缺少已确认来源：{unsourced[0]}"))
+                policy = "HARD" if label in {"人名或身份", "引语"} else "SOFT"
+                issues.append(IssueCandidate("MISSING_SOURCE", "HIGH", block_id, f"{label}缺少已确认来源：{unsourced[0]}", resolution_policy=policy, fragment=unsourced[0], suggestion="补充并确认来源，或删除该表述"))
         for term in pending_terms:
             if term and term in block:
-                issues.append(IssueCandidate("MISSING_SOURCE", "MEDIUM", block_id, f"包含待确认事实：{term}"))
+                issues.append(IssueCandidate("MISSING_SOURCE", "MEDIUM", block_id, f"包含待确认事实：{term}", resolution_policy="HARD", fragment=term, suggestion="先确认事实来源"))
         for term in conflict_terms:
             if term and term in block:
-                issues.append(IssueCandidate("FACT_CONFLICT", "HIGH", block_id, f"正文使用了冲突事实：{term}"))
+                issues.append(IssueCandidate("FACT_CONFLICT", "HIGH", block_id, f"正文使用了冲突事实：{term}", resolution_policy="HARD", fragment=term, suggestion="解决事实冲突后重新检查"))
         if PRIVACY_PATTERN.search(block):
-            issues.append(IssueCandidate("PRIVACY_RISK", "HIGH", block_id, "包含未成年人、联系方式或精确住址等隐私风险"))
-        normalized_block = _normalize(block)
-        for reference in reference_texts:
-            normalized_reference = _normalize(reference)
-            if len(normalized_reference) >= 20 and normalized_reference in normalized_block:
-                issues.append(IssueCandidate("SIMILAR_EXPRESSION", "MEDIUM", block_id, "与参考案例存在过近的连续表达"))
-                break
+            fragment = PRIVACY_PATTERN.search(block).group(0)
+            issues.append(IssueCandidate("PRIVACY_RISK", "HIGH", block_id, "包含未成年人、联系方式或精确住址等隐私风险", resolution_policy="HARD", fragment=fragment, suggestion="删除、匿名化或取得有效授权"))
+        matches = find_similar_fragments(block, reference_texts)
+        if matches:
+            match = matches[0]
+            issues.append(IssueCandidate("SIMILAR_EXPRESSION", "MEDIUM", block_id, f"与参考案例存在过近表达（位置 {match['start']}-{match['end']}）", fragment=match["fragment"], suggestion="保留事实，换用自己的叙述结构与措辞"))
     return issues

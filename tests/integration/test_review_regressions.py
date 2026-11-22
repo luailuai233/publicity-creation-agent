@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from workbench.ai.mock_provider import MockAIProvider
 from workbench.db.base import Base
-from workbench.db.models import Draft, DraftCitation, FactCard, FactSource, Material, Project, QualityIssue, SourceChunk, Strategy
+from workbench.db.models import Draft, DraftCitation, FactCard, FactSource, Material, Project, QualityIssue, ReferenceAnalysis, ReferenceCase, SourceChunk, Strategy
 from workbench.db.projects import delete_project
 from workbench.db.session import create_session_factory, create_sqlite_engine
 from workbench.drafts.schemas import DraftPatch
@@ -30,9 +30,12 @@ def seed(tmp_path: Path):
     chunk = SourceChunk(material_id=material.id, content="来源")
     session.add(chunk); session.flush()
     facts = []
-    for index in range(3):
-        fact = FactCard(project_id=project.id, type="EVENT", content=f"已确认事实 {index}", status="CONFIRMED")
+    for index, fact_type in enumerate(("EVENT", "TIME", "NUMBER")):
+        fact = FactCard(project_id=project.id, type=fact_type, content=f"已确认事实 {index}", status="CONFIRMED")
         session.add(fact); session.flush(); session.add(FactSource(fact_id=fact.id, source_chunk_id=chunk.id)); facts.append(fact)
+    reference = ReferenceCase(project_id=project.id, input_type="TEXT", raw_text="脱敏参考案例", status="DONE", selected=True)
+    session.add(reference); session.flush()
+    session.add(ReferenceAnalysis(reference_id=reference.id, transferable=["使用现场细节开篇"]))
     strategy = Strategy(project_id=project.id, name="现场纪实型", angle="现场", opening="声音", structure="时间线", fact_ids=[f.id for f in facts], method_summary="细节", risk="克制", selected=True)
     session.add(strategy); session.flush()
     draft = Draft(project_id=project.id, strategy_id=strategy.id, title="稿件", outline=[], content="<!-- block:block-1 -->\n已确认事实 0", status="CHECKED", version=1)
@@ -64,7 +67,7 @@ def test_quality_rejects_citation_without_live_source_and_exports_do_not_collide
     session.delete(material); session.flush(); facts[0].status = "PENDING"; session.commit()
     issues = run_quality_check(session, MockAIProvider(delay_ms=0), draft.id)
     assert any(issue.type == "MISSING_SOURCE" for issue in issues)
-    with pytest.raises(ExportBlocked, match="事实"):
+    with pytest.raises(ExportBlocked, match="硬风险"):
         write_markdown_export(session, draft.id, tmp_path / "exports", confirm_high=True)
 
     for issue in issues:

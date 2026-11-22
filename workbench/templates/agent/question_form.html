@@ -1,8 +1,18 @@
-<form class="agent-question" data-agent-answer>
+<form class="agent-question" data-agent-answer data-project-revision="{{ run.waiting_payload.project_revision if run.waiting_payload else '' }}">
   <strong>需要你的确认</strong>
-  <p>{{ run.waiting_payload.prompt if run.waiting_payload else run.waiting_reason }}</p>
+  {% set questions = agent_questions if agent_questions is defined else (run.waiting_payload.questions if run.waiting_payload and run.waiting_payload.questions else []) %}
+  {% for question in questions %}
+    <fieldset data-question-id="{{ question.id }}">
+      <legend>{{ question.prompt }}</legend>
+      <p>{{ question.reason }}</p>
+      {% for option in question.options %}
+      <label class="agent-question-option"><input type="radio" name="answer_{{ question.id }}" value="{{ option.id }}" required><span><strong>{{ option.label }}</strong>{% for evidence in option.evidence %}<small>来源：{{ evidence }}</small>{% endfor %}</span></label>
+      {% endfor %}
+      {% if question.allow_free_text or question.answer_type == 'FREE_TEXT' %}<label>补充说明<textarea name="answer_{{ question.id }}" required></textarea></label>{% endif %}
+    </fieldset>
+  {% else %}
+    <p>{{ run.waiting_reason }}</p>
+  {% endfor %}
   <input type="hidden" name="question_code" value="{{ run.waiting_reason }}">
-  {% if run.waiting_reason == 'MISSING_REFERENCE' %}<label><input type="radio" name="selected_option_id" value="continue" required> 允许按通用写作原则继续</label>{% endif %}
-  <label>补充说明<textarea name="free_text"></textarea></label>
-  <button class="system-button secondary-action" type="submit">提交确认并继续</button>
+  <button class="system-button secondary-action" type="submit">一次提交全部确认</button>
 </form>

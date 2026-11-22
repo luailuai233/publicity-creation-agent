@@ -23,7 +23,8 @@ def seed_project(session, confirmed=4):
     session.flush()
     statuses = ["CONFIRMED"] * confirmed + ["PENDING", "CONFLICT"]
     for index, status in enumerate(statuses):
-        session.add(FactCard(project_id=project.id, type="EVENT", content=f"事实 {index + 1}", status=status, confidence=0.9, conflict_group="g" if status == "CONFLICT" else None))
+        fact_type = "LOCATION" if index == 1 else "EVENT"
+        session.add(FactCard(project_id=project.id, type=fact_type, content=f"事实 {index + 1}", status=status, confidence=0.9, conflict_group="g" if status == "CONFLICT" else None))
     reference = ReferenceCase(project_id=project.id, input_type="TEXT", raw_text="案例原文绝不能进入策略", selected=True, status="DONE")
     session.add(reference)
     session.flush()
@@ -52,9 +53,9 @@ def test_generation_uses_only_confirmed_facts_and_method_summaries(tmp_path: Pat
 
 def test_insufficient_facts_returns_needs_review(tmp_path: Path) -> None:
     session = build_session(tmp_path)
-    project = seed_project(session, confirmed=2)
+    project = seed_project(session, confirmed=1)
 
-    with pytest.raises(StrategyNeedsReview, match="至少确认 3 条事实"):
+    with pytest.raises(StrategyNeedsReview, match="活动事实和一条具体细节"):
         generate_strategies(session, MockAIProvider(delay_ms=0), project.id)
 
 
@@ -71,3 +72,17 @@ def test_schema_retry_and_failed_regeneration_preserve_previous_set(tmp_path: Pa
         generate_strategies(session, failing, project.id)
 
     assert list(session.scalars(select(Strategy.id).where(Strategy.project_id == project.id)).all()) == previous_ids
+
+
+def test_real_provider_strategy_provenance_is_not_demo(tmp_path: Path) -> None:
+    class RealStrategyProviderStub:
+        def generate_strategies(self, facts, method_summaries, project_name):
+            envelope = MockAIProvider(delay_ms=0).generate_strategies(facts, method_summaries, project_name)
+            return envelope.model_copy(update={"provider": "real-provider-stub", "is_demo": False})
+
+    session = build_session(tmp_path)
+    project = seed_project(session)
+
+    strategies = generate_strategies(session, RealStrategyProviderStub(), project.id)
+
+    assert all(strategy.is_demo is False for strategy in strategies)

@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% block title %}编辑提案箱 · {{ project.name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', path='css/strategy.css') }}">{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', path='css/strategy.css') }}?v={{ static_version }}">{% endblock %}
 {% block body %}
-<div class="retro-desktop">
+<div class="retro-desktop has-workflow-navigation">
   {% include "components/topbar.html" %}
-  {% include "components/dock.html" %}
+  {% include "components/workflow_nav.html" %}
   <main class="desktop-canvas strategy-grid">
-    {% for strategy in strategies %}{% include "strategy/proposal_window.html" %}{% else %}<p class="empty-state">请先从灵感页生成 3 个创作策略。</p>{% endfor %}
+    {% for strategy in strategies %}{% include "strategy/proposal_window.html" %}{% else %}<div class="empty-state"><p>还没有创作策略。</p>{% include "strategy/generate_cta.html" %}</div>{% endfor %}
   </main>
   {% include "strategy/settings_dialog.html" %}
-  <footer class="bottom-taskbar"><span data-workflow-status>{{ project.name }} · Agent 推荐并默认采用一个策略，你可以覆盖</span><a class="secondary-action system-button" href="/project/{{ project.id }}/editor">查看 Agent 稿件</a></footer>
+  <footer class="bottom-taskbar"><span data-workflow-status>{{ project.name }} · Agent 推荐只用于排序，必须由你主动选择策略</span><a class="secondary-action system-button" href="/project/{{ project.id }}/editor">查看 Agent 稿件</a></footer>
 </div>
 {% endblock %}

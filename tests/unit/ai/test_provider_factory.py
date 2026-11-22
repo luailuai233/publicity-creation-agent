@@ -1,7 +1,8 @@
 import pytest
 
-from workbench.ai.factory import ProviderNotInstalledError, UnknownProviderError, create_ai_provider
+from workbench.ai.factory import UnknownProviderError, create_ai_provider
 from workbench.ai.mock_provider import MockAIProvider
+from workbench.ai.openai_compatible_provider import OpenAICompatibleProvider
 from workbench.settings import Settings
 
 
@@ -12,14 +13,10 @@ def test_factory_returns_offline_mock_provider_by_default() -> None:
     assert provider.delay_ms == 17
 
 
-def test_openai_compatible_provider_fails_explicitly_without_leaking_key() -> None:
-    settings = Settings(ai_provider="openai_compatible", ai_api_key="super-secret-key", ai_model="example-model")
-
-    with pytest.raises(ProviderNotInstalledError) as caught:
-        create_ai_provider(settings)
-
-    assert "当前版本未内置真实网络 Provider" in str(caught.value)
-    assert "super-secret-key" not in str(caught.value)
+def test_factory_builds_openai_compatible_provider_without_leaking_key() -> None:
+    settings = Settings(ai_provider="openai_compatible", ai_base_url="https://example.test/v1", ai_api_key="super-secret-key", ai_model="example-model")
+    provider = create_ai_provider(settings)
+    assert isinstance(provider, OpenAICompatibleProvider)
     assert "super-secret-key" not in repr(settings)
 
 

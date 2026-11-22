@@ -1,10 +1,13 @@
 from typing import List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class StrategyResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str
+    protagonist: str = "未指定"
     angle: str
     opening: str
     structure: str
@@ -14,5 +17,7 @@ class StrategyResult(BaseModel):
 
 
 class StrategySetResult(BaseModel):
-    strategies: List[StrategyResult]
+    model_config = ConfigDict(extra="forbid")
+
+    strategies: List[StrategyResult] = Field(min_length=3, max_length=3)
     recommended_index: int = Field(default=0, ge=0, le=2)
