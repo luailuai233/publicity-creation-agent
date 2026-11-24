@@ -1,4 +1,5 @@
-<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/c5096076-db7a-47d8-afb9-7519e8c810b1" /># 社团宣传智能创作智能体
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/c5096076-db7a-47d8-afb9-7519e8c810b1" />
+# 社团宣传智能创作智能体
 
 一个面向高校社团宣传场景的 LLM-driven Agent。用户只需创建项目、上传活动资料、提供参考案例并明确创作目标，Agent 即可根据当前项目状态自主选择工具，完成素材解析、事实核验、案例分析、创意策划、推文生成与质量检查，实现从活动资料到宣传稿件的完整创作闭环。
 
