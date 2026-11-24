@@ -119,7 +119,6 @@ Agent 提供六类业务工具：
 推荐使用仓库提供的包装脚本：
 
 ```powershell
-cd D:\aipm\demo
 
 .\scripts\setup.ps1
 
